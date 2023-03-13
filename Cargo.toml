@@ -1,5 +1,5 @@
 [package]
-name = "declarative_par_com"
+name = "decl_cfg"
 version = "0.1.0"
 edition = "2021"
 

@@ -6,8 +6,8 @@ pub struct SrcLoc {
 
 #[macro_export]
 macro_rules! init_lexer {
-    (type Item = $token:ty; $($regex:literal => $(_)? $(|$id:tt| $func:expr)? ;)*) => {
-        pub fn lex<'a>(input: &'a str) -> Vec<($token, SrcLoc)> {
+    (type Item = $token:ty; $($regex:literal => $(_)? $(|$id:tt| $func:expr)?;)*) => {
+        pub fn lex<'a>(input: &'a str) -> Result<Vec<($token, decl_cfg::SrcLoc)>, String>{
             let mut rules: Vec<(regex::Regex, Box<dyn Fn(&str) -> Option<$token>>)> = Vec::new();
 
             $(rules.push(init_lexer!(@lex_rule $token, $regex => $(|$id| $func)?)));*;
@@ -44,7 +44,7 @@ macro_rules! init_lexer {
                         }
 
                         if let Some(token) = func(matsch.as_str()) {
-                            tokens.push((token, SrcLoc {line, col}));
+                            tokens.push((token, decl_cfg::SrcLoc {line, col}));
                         }
 
                         cursor = matsch.end();
@@ -57,11 +57,11 @@ macro_rules! init_lexer {
 
                 // Handle a token not found
                 if !matched {
-                    panic!("Unmatched syntax. at {cursor}: '{}'", &input[cursor..])
+                    return Err(format!("Unmatched syntax. at {cursor}: '{}'", &input[cursor..]))
                 }
             }
 
-            tokens
+            Ok(tokens)
         }
     };
 

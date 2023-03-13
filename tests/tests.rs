@@ -2,7 +2,7 @@
 mod tests {
     use Lit::*;
     use Token::*;
-    use declarative_par_com::*;
+    use decl_cfg::*;
 
     #[derive(Debug, PartialEq)]
     pub enum Lit {
@@ -30,7 +30,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        let result: Vec<Token> = lex("12.43 12 43f brian * 8 true").into_iter().map(|(token, _)| token).collect();
+        let result: Vec<Token> = lex("12.43 12 43f brian * 8 true").unwrap().into_iter().map(|(token, _)| token).collect();
         assert!(result == vec![
             Literal(Float(12.43)),
             Literal(Int(12)),
