@@ -6,7 +6,7 @@ pub struct SrcLoc {
 
 #[macro_export]
 macro_rules! init_lexer {
-    (type Item = $token:ty; $($regex:literal => $(_)? $(|$id:tt| $func:expr)?;)*) => {
+    (TokenType = $token:ty; $($regex:literal => $(_)? $(|$id:tt| $func:expr)?;)*) => {
         pub fn lex<'a>(input: &'a str) -> Result<Vec<($token, decl_cfg::SrcLoc)>, String>{
             let mut rules: Vec<(regex::Regex, Box<dyn Fn(&str) -> Option<$token>>)> = Vec::new();
 
@@ -17,7 +17,7 @@ macro_rules! init_lexer {
             let mut cursor = 0;
 
             let mut line = 1;
-            let mut col = 0;
+            let mut col = 1;
 
             while cursor < input.len() {
                 // Clear whitespace
@@ -26,7 +26,7 @@ macro_rules! init_lexer {
                     cursor += 1;
 
                     if next_char == '\n' {
-                        col = 0;
+                        col = 1;
                         line += 1;
                     } else {
                         col += 1;
