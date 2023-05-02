@@ -12,3 +12,7 @@ macro_rules! init_parser {
         }
     };
 }
+
+pub struct Parser {
+    
+}

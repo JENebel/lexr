@@ -7,7 +7,7 @@ pub struct SrcLoc {
 #[macro_export]
 macro_rules! init_lexer {
     (TokenType = $token:ty; $($regex:literal => $(_)? $(|$id:tt| $func:expr)?;)*) => {
-        pub fn lex<'a>(input: &'a str) -> Result<Vec<($token, decl_cfg::SrcLoc)>, String>{
+        pub fn lex<'a>(input: &'a str) -> Result<Vec<($token, parcom::SrcLoc)>, String>{
             let mut rules: Vec<(regex::Regex, Box<dyn Fn(&str) -> Option<$token>>)> = Vec::new();
 
             $(rules.push(init_lexer!(@lex_rule $token, $regex => $(|$id| $func)?)));*;
@@ -44,7 +44,7 @@ macro_rules! init_lexer {
                         }
 
                         if let Some(token) = func(matsch.as_str()) {
-                            tokens.push((token, decl_cfg::SrcLoc {line, col}));
+                            tokens.push((token, parcom::SrcLoc {line, col}));
                         }
 
                         cursor = matsch.end();

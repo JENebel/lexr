@@ -4,7 +4,7 @@ mod tests {
 
     use Literal::*;
     use Token::*;
-    use decl_cfg::*;
+    use parcom::*;
     use Operator::*;
 
     #[derive(Debug, PartialEq)]
@@ -53,28 +53,18 @@ mod tests {
     init_lexer!(
         TokenType = Token;
 
-        r"[0-9]+(\.[0-9]+)?f" =>        |f| LitToken(Float(f[0..f.len()-1].parse().unwrap()));
-        r"[0-9]+\.[0-9]+" =>            |f| LitToken(Float(f.parse().unwrap()));
-        r"[0-9]+" =>                    |i| LitToken(Int(i.parse().unwrap()));
-        r"(true|false)\b" =>            |b| LitToken(Bool(b.parse().unwrap()));
+        r"[0-9]+(\.[0-9]+)?f" =>        |f|  LitToken(Float(f[0..f.len()-1].parse().unwrap()));
+        r"[0-9]+\.[0-9]+" =>            |f|  LitToken(Float(f.parse().unwrap()));
+        r"[0-9]+" =>                    |i|  LitToken(Int(i.parse().unwrap()));
+        r"(true|false)\b" =>            |b|  LitToken(Bool(b.parse().unwrap()));
         r"[a-zA-Z_][a-zA-Z0-9_]*" =>    |id| IdToken(id);
-        r"\+|\*|-|/" => |op| OpToken(Operator::from(op));
+        r"\+|\*|-|/" =>                 |op| OpToken(Operator::from(op));
     );
 
     init_parser!(
         TokenType = Token;
 
-        Exp ::= Exp, OpToken(_), Exp => |left, op, right| { BinOpExp(left, op, right) }
-            | OpToken(_), Exp => |op, right| { UnOpExp(left, op, right) }
-            | Lit => |lit| { LitExp(lit) }
-
-        Block ::= OpenBrace, OneOrMoreExps, CloseBrace => |_, exps, _| { BlockExpression::new(exps) }
-
-        OneOrMoreExps ::= Exp => |exp| { exp }
-                | Exp, SemiColon, OneOrMoreExps => |exp, _, rest| { concat_exps(exp, rest) }
-         
-        Op  ::= OpToken(op) => |op| { op }
-        Lit ::= LitToken(lit) => |lit| { lit }
+        
     );
 
     #[test]
