@@ -22,6 +22,8 @@ mod tests {
         SemiColon,
         OpenBrace,
         CloseBrace,
+        Newline,
+        EndOfFile,
     }
 
     #[derive(Debug, PartialEq)]
@@ -44,46 +46,41 @@ mod tests {
         }
     }
 
-    pub enum Expression<'a> {
-        BinOpExp(&'a Expression<'a>, Operator, &'a Expression<'a>),
-        UnOpExp(Operator, &'a Expression<'a>),
-        LitExp(Literal)
-    }
-
-    init_lexer!(
-        TokenType = Token;
-
-        r"[0-9]+(\.[0-9]+)?f" =>        |f|  LitToken(Float(f[0..f.len()-1].parse().unwrap()));
-        r"[0-9]+\.[0-9]+" =>            |f|  LitToken(Float(f.parse().unwrap()));
-        r"[0-9]+" =>                    |i|  LitToken(Int(i.parse().unwrap()));
-        r"(true|false)\b" =>            |b|  LitToken(Bool(b.parse().unwrap()));
-        r"[a-zA-Z_][a-zA-Z0-9_]*" =>    |id| IdToken(id);
-        r"\+|\*|-|/" =>                 |op| OpToken(Operator::from(op));
-    );
-
-    init_parser!(
-        TokenType = Token;
-
-        
+    init_lexer!(lex, Token =>
+        r"\n" =>                        |_|  Newline,
+        r"\s+" =>                       |_|  continue,
+        r"[0-9]+(\.[0-9]+)?f" =>        |f|  LitToken(Float(f[0..f.len()-1].parse().unwrap())),
+        r"[0-9]+\.[0-9]+" =>            |f|  LitToken(Float(f.parse().unwrap())),
+        r"[0-9]+" =>                    |i|  LitToken(Int(i.parse().unwrap())),
+        r"(true|false)\b" =>            |b|  LitToken(Bool(b.parse().unwrap())),
+        r"[a-zA-Z_][a-zA-Z0-9_]*" =>    |id| IdToken(id),
+        r"[\+\*-/]" =>                  |op| OpToken(Operator::from(op)),
+        r";" =>                         |_|  SemiColon,
+        r"\{" =>                        |_|  OpenBrace,
+        r"\}" =>                        |_|  CloseBrace,
+        "$" =>                          |_|  EndOfFile
     );
 
     #[test]
     fn it_works() {
-        let result: Vec<Token> = lex("12.43 12 43f brian * 8 true").unwrap().into_iter().map(|(token, _)| token).collect();
+        let prog = "12.43 12  43.0\nbrian * 8 true";
+        let r = match lex(prog) {
+            Ok(r) => r,
+            Err(e) => panic!("Error: {} at {}", e.0, e.1.display(&prog))
+        };
+        
+        let result: Vec<Token> = r.into_iter().map(|(token, l)| {println!("{}", l.display(prog)); token}).collect();
+        println!("{:?}", result);
         assert!(result == vec![
             LitToken(Float(12.43)),
             LitToken(Int(12)),
             LitToken(Float(43.0)),
+            Newline,
             IdToken("brian"),
             OpToken(Mult),
             LitToken(Int(8)),
             LitToken(Bool(true)),
+            EndOfFile
         ]);
-    }
-
-    fn bbb(exp: Expression) {
-        if let Expression = exp {
-
-        }
     }
 }
