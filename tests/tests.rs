@@ -46,8 +46,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        init_lexer!(lex, Token =>
-            r"\n" => |_| Newline,
+        lexer!(lex, Token =>
             r"\s+" => |_| continue,
             r"[0-9]+(\.[0-9]+)?f" => |f| LitToken(Float(f[0..f.len()-1].parse().unwrap())),
             r"[0-9]+\.[0-9]+" => |f| LitToken(Float(f.parse().unwrap())),
@@ -86,8 +85,9 @@ mod tests {
     fn test2() {
         const WORD: &str = r"[a-zA-Z]+";
 
-        init_lexer!(lex, Token =>
-            "#" WORD "#" =>                 |w|  {println!("{}", w); EndOfFile},
+        lexer!(lex, Token =>
+            "#".WORD."#" => |w|  {println!("{}", w); EndOfFile},
+            _ => |_| panic!()
         );
 
         let prog = "#hello#";

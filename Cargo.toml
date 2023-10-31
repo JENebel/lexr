@@ -5,4 +5,4 @@ edition = "2021"
 
 [dependencies]
 regex = "1.10.2"
-regex-macro = "0.2.0"
+lazy_static = "1.4.0"

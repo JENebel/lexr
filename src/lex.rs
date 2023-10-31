@@ -7,7 +7,7 @@
 /// 
 /// Usage example:
 ///     
-///     use parcom::init_lexer;
+///     use parcom::lexer;
 /// 
 ///     #[derive(Debug, PartialEq)]
 ///     pub enum Token {
@@ -19,13 +19,13 @@
 ///     // Statics and constants are allowed
 ///     const WORD: &str = r"[a-zA-Z]+";
 /// 
-///     init_lexer!{lex, Token => 
+///     lexer!{lex, Token => 
 ///         r"\s+" =>         |_|  continue, // Ignore whitespace. 'continue' is the only allowed expression except for tokens and panic
 ///         "[0-9]+" =>       |i|  Token::Number(i.parse().unwrap()),
 ///         WORD =>           |id| { // You can use blocks
 ///                                    println!("{}", id); 
 ///                                    Token::Word(id.to_string()) },
-///         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
+///         "#".WORD."#" =>   |_|  continue, // You can use a sequence of regexes separated by '.'
 ///         "$" =>            |_|  Token::EndOfFile
 ///     }
 ///     
@@ -34,9 +34,9 @@
 ///         Token::Word("abc".to_string()), 
 ///         Token::EndOfFile
 ///     ]);
-macro_rules! init_lexer {(
+macro_rules! lexer {(
         $name:ident, $token:ty => 
-        $($($regex:expr)+ => |$id:pat_param| $closure:expr),* $(,)?
+        $($($regex:tt).+ => |$id:pat_param| $closure:expr),* $(,)?
     ) => {
         #[allow(unreachable_code)]
         /// The lexer function
@@ -55,13 +55,9 @@ macro_rules! init_lexer {(
                 if idx == input.len() { empty = true; }
 
                 $(
-                    let r = regex_macro::regex!({
-                        let mut r_str = "^".to_string();
-                        $(r_str.push_str($regex);)+
-                        r_str
-                    }.as_str());
+                    let re = lexer!(@regex_rule $($regex)+);
 
-                    if let Some(mat) = r.find(&input[idx..]) {
+                    if let Some(mat) = re.find(&input[idx..]) {
                         let length = mat.end();
                         let $id = mat.as_str();
                         
@@ -97,4 +93,26 @@ macro_rules! init_lexer {(
             Ok(tokens)
         }
     };
+
+    (@regex_rule _) => {
+        {
+            lazy_static::lazy_static! {
+                static ref REGEX: regex::Regex = regex::Regex::new("(?s).").unwrap();
+            }; 
+            &REGEX
+        }
+    };
+
+    (@regex_rule $($regex:expr)+) => {
+        {
+            lazy_static::lazy_static! {
+                static ref REGEX: regex::Regex = regex::Regex::new({
+                    let mut r_str = "^".to_string();
+                    $(r_str.push_str($regex);)+
+                    r_str
+                }.as_str()).unwrap();
+            }; 
+            &REGEX
+        }
+    }
 }
