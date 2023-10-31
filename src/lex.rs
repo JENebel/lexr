@@ -1,6 +1,10 @@
 #[macro_export]
 /// Define a lexer function with provided rules.
 ///
+/// The lexer function takes a string slice and returns a vector of tokens and their locations.
+/// 
+/// If it is unable to parse an input, it returns an error with the first character in the unmatched subsequence, and the location of the error.
+/// 
 /// Usage example:
 ///     
 ///     use parcom::init_lexer;
@@ -12,22 +16,28 @@
 ///         EndOfFile,
 ///     }
 /// 
+///     // Statics and constants are allowed
+///     const WORD: &str = r"[a-zA-Z]+";
+/// 
 ///     init_lexer!{lex, Token => 
-///         r"[0-9]+" =>    |i|  Token::Number(i.parse().unwrap()),
-///         r"[a-zA-Z]+" => |id| { println!("{}", id); Token::Word(id.to_string()) }, // You can use blocks
-///         r"\s+" =>       |_|  continue, // Skip this token
-///         r"$" =>         |_|  Token::EndOfFile
+///         r"\s+" =>         |_|  continue, // Ignore whitespace. 'continue' is the only allowed expression except for tokens and panic
+///         "[0-9]+" =>       |i|  Token::Number(i.parse().unwrap()),
+///         WORD =>           |id| { // You can use blocks
+///                                    println!("{}", id); 
+///                                    Token::Word(id.to_string()) },
+///         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
+///         "$" =>            |_|  Token::EndOfFile
 ///     }
 ///     
-///     assert!(lex("123 abc").unwrap().into_iter().map(|(t, _)| t).collect::<Vec<_>>() == vec![
+///     assert!(lex("123 abc #comment#").unwrap().into_iter().map(|(t, _)| t).collect::<Vec<_>>() == vec![
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
 ///         Token::EndOfFile
 ///     ]);
-macro_rules! init_lexer {
-    (
-        $name:ident, $token:ty =>
-        $($regex:literal => |$id:pat_param| $closure:expr),* $(,)?) => {
+macro_rules! init_lexer {(
+        $name:ident, $token:ty => 
+        $($($regex:expr)+ => |$id:pat_param| $closure:expr),* $(,)?
+    ) => {
         #[allow(unreachable_code)]
         /// The lexer function
         /// 
@@ -44,24 +54,32 @@ macro_rules! init_lexer {
                 if idx == input.len() { empty = true; }
 
                 $(
-                    let r = regex_macro::regex!(concat!(r"^", $regex));
+                    let r = regex_macro::regex!({
+                        let mut r_str = "^".to_string();
+                        $(r_str.push_str($regex);)+
+                        r_str
+                    }.as_str());
+
                     if let Some(mat) = r.find(&input[idx..]) {
                         let length = mat.end();
                         let $id = mat.as_str();
                         
                         for _ in 0..length {
-                            let _ = input_iter.next().unwrap();
+                            let _ = input_iter.next();
                         }
+
                         let start_index = idx;
                         idx += length;
                         
                         let token = $closure; // If the closure is a continue, it skips the push
-                        tokens.push((token, parcom::SrcLoc::new(start_index, idx - 1)));
+                        tokens.push((token, parcom::SrcLoc::new(start_index, idx - 1, input)));
                         continue;
                     }
                 )*
 
-                return Err((*input_iter.peek().unwrap(), parcom::SrcLoc::new(idx, idx)));
+                if let Some(c) = input_iter.peek() {
+                    return Err((*c, parcom::SrcLoc::new(idx, idx, input)));
+                }
             }
 
             Ok(tokens)
