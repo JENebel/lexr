@@ -15,11 +15,7 @@ pub struct SrcLoc {
 impl SrcLoc {
     pub fn new(start: (usize, usize), end: (usize, usize)) -> Self {
         Self {
-            start: if start > end {
-                end
-            } else {
-                start
-            },
+            start,
             end,
         }
     }

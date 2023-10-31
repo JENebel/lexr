@@ -44,10 +44,9 @@ macro_rules! init_lexer {(
         /// Returns a vector of tokens and their locations
         pub fn $name(input: &str) -> Result<Vec<($token, parcom::SrcLoc)>, (char, parcom::SrcLoc)> {
             let mut tokens = Vec::new();
-            let mut input_iter = input.chars().peekable();
+            let mut input_iter = input.chars();
             let mut idx = 0;
-            let mut line = 1;
-            let mut col = 1;
+            let (mut line, mut col) = (1, 1);
             let mut empty = false;
 
             loop {
@@ -66,17 +65,13 @@ macro_rules! init_lexer {(
                         let length = mat.end();
                         let $id = mat.as_str();
                         
-                        let mut start_line = line;
-                        let mut start_col = col;
-                        let mut end_line = line;
-                        let mut end_col = col;
-
-                        let end_index = idx + length - 1;
+                        let start = (line, col);
+                        let mut end = (line, col);
+                    
                         for i in 0..length {
                             let c = input_iter.next().unwrap();
-                            if idx + i == end_index {
-                                end_line = line;
-                                end_col = col;
+                            if i == length - 1 {
+                                end = (line, col);
                             }
                             if c == '\n' {
                                 line += 1;
@@ -89,13 +84,13 @@ macro_rules! init_lexer {(
                         idx += length;
 
                         let token = $closure; // If the closure is a continue, it skips the push
-                        tokens.push((token, parcom::SrcLoc::new((start_line, start_col), (end_line, end_col))));
+                        tokens.push((token, parcom::SrcLoc::new(start.min(end), end)));
                         continue;
                     }
                 )*
 
-                if let Some(c) = input_iter.peek() {
-                    return Err((*c, parcom::SrcLoc::new((line, col), (line, col))));
+                if let Some(c) = input_iter.next() {
+                    return Err((c, parcom::SrcLoc::new((line, col), (line, col))));
                 }
             }
 
