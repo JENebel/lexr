@@ -85,7 +85,7 @@ mod tests {
     }
 
     const WORD: &str = r"[a-zA-Z]+";
-    
+
     #[test]
     fn test2() {
         

@@ -37,9 +37,10 @@
 /// 
 macro_rules! lexer {
     ($v:vis $name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
-    concat_idents::concat_idents!(name = _LEXER_, $name {
+    concat_idents::concat_idents!(name = _LEXER_, $name { 
         #[allow(unused_imports)]
         #[allow(non_snake_case)]
+        mod mod_name { use super::*; // In a mod to prevent access to the struct fields
         #[allow(non_camel_case_types)]
         pub struct name<'a> {
             input: &'a str,
@@ -108,18 +109,20 @@ macro_rules! lexer {
                 }
 
                 if let Some(c) = self.input_iter.next() {
-                    panic!("Unexpected character '{}' at {}:{}:{}", c, self.line, self.col, self.idx);
+                    panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.line, self.col), (self.line, self.col)));
                 }
 
                 None
             }
         }
-        /// The lexer function
-        /// 
-        /// Returns a vector of tokens and their locations
-        pub fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> name {
-            name::new(input $(,$($arg),*)?)
-        };
+    }
+    use mod_name::*;
+    /// The lexer function
+    /// 
+    /// Returns a vector of tokens and their locations
+    pub fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> name {
+        name::new(input $(,$($arg),*)?)
+    }
     })};
 
     (@regex_rule _) => {
