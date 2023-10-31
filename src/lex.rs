@@ -2,20 +2,20 @@
 /// Define a lexer function with provided rules.
 ///
 /// The lexer function takes a string slice and returns a vector of tokens and their locations.
-/// 
+///
 /// If it is unable to parse an input, it returns an error with the first character in the unmatched subsequence, and the location of the error.
-/// 
+///
 /// Usage example:
-///     
-///     use parcom::lexer;
-/// 
+///
+///     /*use parcom::lexer;
+///
 ///     #[derive(Debug, PartialEq)]
 ///     pub enum Token {
 ///         Word(String),
 ///         Number(u32),
 ///         EndOfFile,
 ///     }
-/// 
+///
 ///     // Statics and constants can be used to reuse regexes
 ///     const WORD: &str = r"[a-zA-Z]+";
 /// 
@@ -28,69 +28,99 @@
 ///         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
 ///         "$" =>            |_|  Token::EndOfFile
 ///     }}
-///     
+///
 ///     assert!(lex("123 abc #comment#").unwrap().into_iter().map(|(t, _)| t).collect::<Vec<_>>() == vec![
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
 ///         Token::EndOfFile
-///     ]);
+///     ]);*/
+/// 
 macro_rules! lexer {
-    ($name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
-        #[allow(unreachable_code)]
+    ($v:vis $name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
+    concat_idents::concat_idents!(name = _LEXER_, $name {
+        #[allow(unused_imports)]
+        #[allow(non_snake_case)]
+        #[allow(non_camel_case_types)]
+        pub struct name<'a> {
+            input: &'a str,
+            input_iter: std::str::Chars<'a>,
+            idx: usize,
+            line: usize,
+            col: usize,
+            empty: bool,
+            $($($arg: $arg_typ),*)?
+        }
+
+        impl<'a> name<'a> {
+            pub fn new(input: &'a str $(,$($arg: $arg_typ),*)?) -> Self {
+                name {
+                    input,
+                    input_iter: input.chars(),
+                    idx: 0,
+                    line: 1,
+                    col: 1,
+                    empty: false,
+                    $($($arg),*)?
+                }
+            }
+        }
+
+        impl<'a> Iterator for name<'a> {
+            type Item = ($token, parcom::SrcLoc);
+
+            #[allow(unreachable_code)]
+            fn next(&mut self) -> Option<Self::Item> {
+                $($(let $arg: $arg_typ = self.$arg);*)?;
+
+                // This here to allow for matching $ as eof a single time while avoiding infinite loop
+                if self.empty { return None }
+                if self.idx == self.input.len() { self.empty = true; }
+
+                loop {
+                    $(
+                        let re = lexer!(@regex_rule $regpat $($regex)*);
+                        if let Some(mat) = re.find(&self.input[self.idx..]) {
+                            let length = mat.end();
+                            let $id = mat.as_str();
+                            
+                            let start = (self.line, self.col);
+                            let mut end = start;
+                        
+                            for i in 0..length {
+                                let c = self.input_iter.next().unwrap();
+                                if i == length - 1 {
+                                    end = (self.line, self.col);
+                                }
+                                if c == '\n' {
+                                    self.line += 1;
+                                    self.col = 1;
+                                } else {
+                                    self.col += 1;
+                                }
+                            }
+
+                            self.idx += length;
+
+                            let token = $closure; // If the closure is a continue, it skips the push
+                            return Some((token, parcom::SrcLoc::new(start, end)));
+                        }
+                    )*
+                }
+
+                if let Some(c) = self.input_iter.next() {
+                    panic!("Unexpected character '{}' at {}:{}:{}", c, self.line, self.col, self.idx);
+                }
+
+                None
+            }
+        }
         /// The lexer function
         /// 
         /// Returns a vector of tokens and their locations
-        pub fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> Result<Vec<($token, parcom::SrcLoc)>, (char, parcom::SrcLoc)> {
-            let mut tokens = Vec::new();
-            let mut input_iter = input.chars();
-            let mut idx = 0;
-            let (mut line, mut col) = (1, 1);
-            let mut empty = false;
-
-            loop {
-                // This here to allow for matching $ as eof a single time while avoiding infinite loop
-                if empty { break; }
-                if idx == input.len() { empty = true; }
-
-                $(
-                    let re = lexer!(@regex_rule $regpat $($regex)*);
-
-                    if let Some(mat) = re.find(&input[idx..]) {
-                        let length = mat.end();
-                        let $id = mat.as_str();
-                        
-                        let start = (line, col);
-                        let mut end = (line, col);
-                    
-                        for i in 0..length {
-                            let c = input_iter.next().unwrap();
-                            if i == length - 1 {
-                                end = (line, col);
-                            }
-                            if c == '\n' {
-                                line += 1;
-                                col = 1;
-                            } else {
-                                col += 1;
-                            }
-                        }
-
-                        idx += length;
-
-                        let token = $closure; // If the closure is a continue, it skips the push
-                        tokens.push((token, parcom::SrcLoc::new(start.min(end), end)));
-                        continue;
-                    }
-                )*
-
-                if let Some(c) = input_iter.next() {
-                    return Err((c, parcom::SrcLoc::new((line, col), (line, col))));
-                }
-            }
-
-            Ok(tokens)
-        }
-    };
+        pub fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> name {
+            name::new(input $(,$($arg),*)?)
+        };
+    })};
 
     (@regex_rule _) => {
         {

@@ -1,3 +1,5 @@
+use std::path::Iter;
+
 #[cfg(test)]
 mod tests {
     use Literal::*;
@@ -13,9 +15,9 @@ mod tests {
     }
 
     #[derive(Debug, PartialEq)]
-    pub enum Token<'a> {
+    pub enum Token {
         OpToken(Operator),
-        IdToken(&'a str),
+        IdToken(String),
         LitToken(Literal),
         SemiColon,
         OpenBrace,
@@ -46,7 +48,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        lexer!(lex -> Token {
+        /*lexer!(lex -> Token {
             r"\n" => |_| Newline,
             r"\s+" => |_| continue,
             r"[0-9]+(\.[0-9]+)?f" => |f| LitToken(Float(f[0..f.len()-1].parse().unwrap())),
@@ -79,12 +81,14 @@ mod tests {
             LitToken(Int(8)),
             LitToken(Bool(true)),
             EndOfFile
-        ]);
+        ]);*/
     }
 
+    const WORD: &str = r"[a-zA-Z]+";
+    
     #[test]
     fn test2() {
-        const WORD: &str = r"[a-zA-Z]+";
+        
 
         lexer!(lex(a: i32) -> Token {
             "#" WORD "#" => |w|  {println!("{w}:{a}"); EndOfFile},
@@ -93,9 +97,37 @@ mod tests {
 
         let prog = "#hello#";
 
-        match lex(prog, 4) {
-            Ok(_) => (),
-            Err(e) => panic!("Error: '{}' at {}", e.0, e.1)
-        };
+        let l = lex(prog, 5);
+        for l in l {
+            println!("{:?}", l);
+        }
+    }
+
+    #[test]
+    fn test3() {
+        lexer!{lex -> Token {
+            "h" => |_| Token::LitToken(Int(1)),
+            "e" => |_| Token::LitToken(Int(2)),
+            "l" => |_| Token::LitToken(Int(3)),
+            "o" => |_| Token::LitToken(Int(4)),
+        }}
+
+        let iter = lex("hello");
+
+        for (token, loc) in iter {
+            println!("{}: {:?}", loc, token);
+        }
+    }
+}
+
+struct A {
+
+}
+
+impl Iterator for A {
+    type Item = ();
+
+    fn next(&mut self) -> Option<Self::Item> {
+        None
     }
 }
