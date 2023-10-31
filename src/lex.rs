@@ -46,6 +46,8 @@ macro_rules! init_lexer {(
             let mut tokens = Vec::new();
             let mut input_iter = input.chars().peekable();
             let mut idx = 0;
+            let mut line = 1;
+            let mut col = 1;
             let mut empty = false;
 
             loop {
@@ -64,21 +66,36 @@ macro_rules! init_lexer {(
                         let length = mat.end();
                         let $id = mat.as_str();
                         
-                        for _ in 0..length {
-                            let _ = input_iter.next();
+                        let mut start_line = line;
+                        let mut start_col = col;
+                        let mut end_line = line;
+                        let mut end_col = col;
+
+                        let end_index = idx + length - 1;
+                        for i in 0..length {
+                            let c = input_iter.next().unwrap();
+                            if idx + i == end_index {
+                                end_line = line;
+                                end_col = col;
+                            }
+                            if c == '\n' {
+                                line += 1;
+                                col = 1;
+                            } else {
+                                col += 1;
+                            }
                         }
 
-                        let start_index = idx;
                         idx += length;
-                        
+
                         let token = $closure; // If the closure is a continue, it skips the push
-                        tokens.push((token, parcom::SrcLoc::new(start_index, idx - 1, input)));
+                        tokens.push((token, parcom::SrcLoc::new((start_line, start_col), (end_line, end_col))));
                         continue;
                     }
                 )*
 
                 if let Some(c) = input_iter.peek() {
-                    return Err((*c, parcom::SrcLoc::new(idx, idx, input)));
+                    return Err((*c, parcom::SrcLoc::new((line, col), (line, col))));
                 }
             }
 

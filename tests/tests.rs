@@ -67,7 +67,7 @@ mod tests {
             Err(e) => panic!("Error: {} at {}", e.0, e.1)
         };
         
-        let result: Vec<Token> = r.into_iter().map(|(token, /*l*/ _)| {/*println!("{}", l.display(prog));*/ token}).collect();
+        let result: Vec<Token> = r.into_iter().map(|(token, l)| {println!("{}", l); token}).collect();
         //println!("{:?}", result);
         assert!(result == vec![
             LitToken(Float(12.43)),

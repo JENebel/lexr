@@ -7,29 +7,29 @@ pub use lex::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// A location in the source code
-pub struct SrcLoc<'a> {
-    start: usize,
-    end: usize,
-    source: &'a str
+pub struct SrcLoc {
+    start: (usize, usize),
+    end: (usize, usize),
 }
 
-impl<'a> SrcLoc<'a> {
-    pub fn new(start: usize, end: usize, source: &'a str) -> Self {
+impl SrcLoc {
+    pub fn new(start: (usize, usize), end: (usize, usize)) -> Self {
         Self {
-            start: if start < end { start} else { end },
+            start: if start > end {
+                end
+            } else {
+                start
+            },
             end,
-            source
         }
     }
 
     /// Combine two source locations into one, spanning from the start of the first to the end of the second
     pub fn combine(&self, other: SrcLoc) -> SrcLoc {
-        assert!(self.source == other.source, "Combining source locations from different sources");
         assert!(self.end <= other.start, "Combining overlapping source locations");
         SrcLoc {
             start: self.start,
-            end: other.end,
-            source: self.source
+            end: other.end
         }
     }
 
@@ -37,30 +37,11 @@ impl<'a> SrcLoc<'a> {
     /// 
     /// returns (start_line, start_col, end_line, end_col)
     pub fn get_loc(&self) -> (usize, usize, usize, usize) {
-        let mut line = 1;
-        let mut col = 1;
-        let mut start_line = 1;
-        let mut start_col = 1;
-        for (i, c) in self.source.chars().enumerate() {
-            if i == self.start {
-                start_line = line;
-                start_col = col;
-            }
-            if i == self.end {
-                break;
-            }
-            if c == '\n' {
-                line += 1;
-                col = 1;
-            } else {
-                col += 1;
-            }
-        }
-        (start_line, start_col, line, col)
+        (self.start.0, self.start.1, self.end.0, self.end.1)
     }
 }
 
-impl<'a> Display for SrcLoc<'a> {
+impl Display for SrcLoc {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let (start_line, start_col, end_line, end_col) = self.get_loc();
         if start_line == end_line && start_col == end_col {
@@ -73,12 +54,21 @@ impl<'a> Display for SrcLoc<'a> {
     }
 }
 
-impl<'a> Default for SrcLoc<'a> {
+impl Default for SrcLoc {
     fn default() -> Self {
         Self {
-            start: 0,
-            end: 0,
-            source: ""
+            start: (0, 0),
+            end: (0, 0),
+        }
+    }
+}
+
+impl PartialOrd for SrcLoc {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        if self.start.0 == other.start.0 {
+            self.start.1.partial_cmp(&other.start.1)
+        } else {
+            self.start.0.partial_cmp(&other.start.0)
         }
     }
 }
