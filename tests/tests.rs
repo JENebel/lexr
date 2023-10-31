@@ -46,7 +46,7 @@ mod tests {
 
     #[test]
     fn it_works() {
-        lexer!(lex, Token =>
+        lexer!(lex -> Token {
             r"\n" => |_| Newline,
             r"\s+" => |_| continue,
             r"[0-9]+(\.[0-9]+)?f" => |f| LitToken(Float(f[0..f.len()-1].parse().unwrap())),
@@ -59,7 +59,7 @@ mod tests {
             r"\{" => |_| OpenBrace,
             r"\}" => |_| CloseBrace,
             "$" => |_| EndOfFile
-        );
+        });
 
         let prog = "12.43 12  43.0\nbrian * 8 true";
         let r = match lex(prog) {
@@ -86,14 +86,14 @@ mod tests {
     fn test2() {
         const WORD: &str = r"[a-zA-Z]+";
 
-        lexer!(lex, Token =>
-            "#" WORD "#" => |w|  {println!("{}", w); EndOfFile},
+        lexer!(lex(a: i32) -> Token {
+            "#" WORD "#" => |w|  {println!("{w}:{a}"); EndOfFile},
             _ => |_| panic!()
-        );
+        });
 
         let prog = "#hello#";
 
-        match lex(prog) {
+        match lex(prog, 4) {
             Ok(_) => (),
             Err(e) => panic!("Error: '{}' at {}", e.0, e.1)
         };

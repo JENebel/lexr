@@ -19,7 +19,7 @@
 ///     // Statics and constants can be used to reuse regexes
 ///     const WORD: &str = r"[a-zA-Z]+";
 /// 
-///     lexer!{lex, Token => 
+///     lexer!{lex -> Token {
 ///         r"\s+" =>         |_|  continue, // Ignore whitespace. 'continue' is the only allowed expression except for tokens and panic
 ///         "[0-9]+" =>       |i|  Token::Number(i.parse().unwrap()),
 ///         WORD =>           |id| { // You can use blocks
@@ -27,22 +27,20 @@
 ///                                    Token::Word(id.to_string()) },
 ///         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
 ///         "$" =>            |_|  Token::EndOfFile
-///     }
+///     }}
 ///     
 ///     assert!(lex("123 abc #comment#").unwrap().into_iter().map(|(t, _)| t).collect::<Vec<_>>() == vec![
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
 ///         Token::EndOfFile
 ///     ]);
-macro_rules! lexer {(
-        $name:ident, $token:ty => 
-        $($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?
-    ) => {
+macro_rules! lexer {
+    ($name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
         #[allow(unreachable_code)]
         /// The lexer function
         /// 
         /// Returns a vector of tokens and their locations
-        pub fn $name(input: &str) -> Result<Vec<($token, parcom::SrcLoc)>, (char, parcom::SrcLoc)> {
+        pub fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> Result<Vec<($token, parcom::SrcLoc)>, (char, parcom::SrcLoc)> {
             let mut tokens = Vec::new();
             let mut input_iter = input.chars();
             let mut idx = 0;
