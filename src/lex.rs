@@ -16,7 +16,7 @@
 ///         EndOfFile,
 ///     }
 /// 
-///     // Statics and constants are allowed
+///     // Statics and constants can be used to reuse regexes
 ///     const WORD: &str = r"[a-zA-Z]+";
 /// 
 ///     lexer!{lex, Token => 
@@ -25,7 +25,7 @@
 ///         WORD =>           |id| { // You can use blocks
 ///                                    println!("{}", id); 
 ///                                    Token::Word(id.to_string()) },
-///         "#".WORD."#" =>   |_|  continue, // You can use a sequence of regexes separated by '.'
+///         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
 ///         "$" =>            |_|  Token::EndOfFile
 ///     }
 ///     
@@ -36,7 +36,7 @@
 ///     ]);
 macro_rules! lexer {(
         $name:ident, $token:ty => 
-        $($($regex:tt).+ => |$id:pat_param| $closure:expr),* $(,)?
+        $($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?
     ) => {
         #[allow(unreachable_code)]
         /// The lexer function
@@ -55,7 +55,7 @@ macro_rules! lexer {(
                 if idx == input.len() { empty = true; }
 
                 $(
-                    let re = lexer!(@regex_rule $($regex)+);
+                    let re = lexer!(@regex_rule $regpat $($regex)*);
 
                     if let Some(mat) = re.find(&input[idx..]) {
                         let length = mat.end();
