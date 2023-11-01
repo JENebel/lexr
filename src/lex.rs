@@ -1,3 +1,5 @@
+pub extern crate concat_idents;
+
 #[macro_export]
 /// Define a lexer function with provided rules.
 ///
@@ -7,9 +9,9 @@
 ///
 /// Usage example:
 ///
-///     /*use parcom::lexer;
+///     use parcom::lexer;
 ///
-///     #[derive(PartialEq)]
+///     #[derive(PartialEq, Debug)]
 ///     pub enum Token {
 ///         Word(String),
 ///         Number(u32),
@@ -34,13 +36,14 @@
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
 ///         Token::EndOfFile
-///     ]);*/
+///     ]);
 /// 
 macro_rules! lexer {
     ($v:vis $name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
     concat_idents::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
+        /// Automatically generated lexer struct. Do not access its fields directly! Only use as iterator
         $v struct name<'a> {
             input: &'a str,
             input_iter: std::str::Chars<'a>,
@@ -107,10 +110,8 @@ macro_rules! lexer {
             }
         }
 
-        /// Returns an iterator over the input source, yielding tokens and their locations.
-        /// 
-        /// This iterator is single-use, and its fieldsshould not be accessed directly!
         #[doc(hidden)]
+        #[doc=stringify!($token)]
         $v fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> name {
             name {
                 input,
@@ -121,7 +122,7 @@ macro_rules! lexer {
                 empty: false,
                 $($($arg),*)?
             }
-        };
+        }
     })};
 
     (@regex_rule _) => {

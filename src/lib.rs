@@ -13,6 +13,7 @@ pub struct SrcLoc {
 }
 
 impl SrcLoc {
+    /// Create a new source location from a start and end position
     pub fn new(start: (usize, usize), end: (usize, usize)) -> Self {
         Self {
             start,
@@ -21,6 +22,8 @@ impl SrcLoc {
     }
 
     /// Combine two source locations into one, spanning from the start of the first to the end of the second
+    /// 
+    /// Panics if the source locations overlap
     pub fn combine(&self, other: SrcLoc) -> SrcLoc {
         assert!(self.end <= other.start, "Combining overlapping source locations");
         SrcLoc {
@@ -46,15 +49,6 @@ impl Display for SrcLoc {
             write!(f, "{}:{}-{}", start_line, start_col, end_col)
         } else {
             write!(f, "{}:{}-{}:{}", start_line, start_col, end_line, end_col)
-        }
-    }
-}
-
-impl Default for SrcLoc {
-    fn default() -> Self {
-        Self {
-            start: (0, 0),
-            end: (0, 0),
         }
     }
 }

@@ -51,8 +51,8 @@ mod tests {
             eof => |_| EndOfFile,
         });
 
-        let l: Vec<Token> = lexer("Brian:?Brian       ").map(|(token, _)| token).collect();
-        assert_eq!(l, vec![Newline])
+        let l: Vec<Token> = lexer("Brian").map(|(token, _)| token).collect();
+        assert_eq!(l, vec![Newline, EndOfFile])
     }
 
     #[test]
