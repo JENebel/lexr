@@ -1,11 +1,10 @@
-extern crate concat_idents;
-
 pub mod lex;
 pub mod parse;
 
 use std::fmt::Display;
 
 pub use lex::*;
+pub use concat_idents::*;
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// A location in the source code
