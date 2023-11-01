@@ -126,7 +126,7 @@ macro_rules! lexer {
                 $($($arg),*)?
             }
         }
-    })};
+    });};
 
     (@regex_rule _) => {
         {
