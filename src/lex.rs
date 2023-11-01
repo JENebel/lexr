@@ -9,7 +9,7 @@
 ///
 ///     /*use parcom::lexer;
 ///
-///     #[derive(Debug, PartialEq)]
+///     #[derive(PartialEq)]
 ///     pub enum Token {
 ///         Word(String),
 ///         Number(u32),
@@ -26,10 +26,11 @@
 ///                                    println!("{}", id); 
 ///                                    Token::Word(id.to_string()) },
 ///         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
-///         "$" =>            |_|  Token::EndOfFile
+///         eof =>            |_|  Token::EndOfFile
 ///     }}
 ///
-///     assert!(lex("123 abc #comment#").map(|(t, _)| t).collect::<Vec<_>>() == vec![
+///     let result: Vec<Token> = lex("123 abc #comment#").map(|(token, _)| token).collect();
+///     assert_eq!(result, vec![
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
 ///         Token::EndOfFile
@@ -57,13 +58,17 @@ macro_rules! lexer {
             fn next(&mut self) -> Option<Self::Item> {
                 $($(let $arg: $arg_typ = self.$arg);*)?;
 
-                // This here to allow for matching $ as eof a single time while avoiding infinite loop
-                if self.empty { return None }
-                if self.cursor > self.input.len() - 1 { self.empty = true; }
-
-                loop {$(
-                    let re = lexer!(@regex_rule $regpat $($regex)*);
-                    if let Some(mat) = re.find(&self.input[self.cursor..]) {
+                let mut matched = false;
+                loop {
+                    // These allow for seamless matching of eof
+                    matched = false;
+                    if self.empty { break }
+                    if self.input[self.cursor..].len() == 0 { self.empty = true; }
+                    
+                    $(
+                    let regex = lexer!(@regex_rule $regpat $($regex)*);
+                    if let Some(mat) = regex.find(&self.input[self.cursor..]) {
+                        matched = true;
                         let length = mat.end();
                         let $id = mat.as_str();
                         
@@ -85,15 +90,17 @@ macro_rules! lexer {
 
                         self.cursor += length;
 
-                        let token = lexer!(@closure $closure);
+                        let token = $closure;
                         return Some((token, parcom::SrcLoc::new(start, end)));
                     })*
 
+                    break
+                }
+
+                if !self.empty && !matched {
                     if let Some(c) = self.input_iter.next() {
                         panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.line, self.col), (self.line, self.col)));
                     }
-
-                    break
                 }
 
                 None
@@ -120,7 +127,7 @@ macro_rules! lexer {
     (@regex_rule _) => {
         {
             lazy_static::lazy_static! {
-                static ref REGEX: regex::Regex = regex::Regex::new(r"(?s).").unwrap();
+                static ref REGEX: regex::Regex = regex::Regex::new(r"(?s)^.").unwrap();
             }; 
             &REGEX
         }
@@ -129,7 +136,7 @@ macro_rules! lexer {
     (@regex_rule eof) => {
         {
             lazy_static::lazy_static! {
-                static ref REGEX: regex::Regex = regex::Regex::new(r"$").unwrap();
+                static ref REGEX: regex::Regex = regex::Regex::new(r"^$").unwrap();
             }; 
             &REGEX
         }
@@ -147,10 +154,4 @@ macro_rules! lexer {
             &REGEX
         }
     };
-
-    (@closure continue) => { break };
-
-    (@closure break) => { return None };
-
-    (@closure $e:expr) => { $e }
 }

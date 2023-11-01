@@ -45,6 +45,17 @@ mod tests {
     }
 
     #[test]
+    fn test1() {
+        lexer!(lexer -> Token {
+            "Brian" => |_| Newline,
+            eof => |_| EndOfFile,
+        });
+
+        let l: Vec<Token> = lexer("Brian:?Brian       ").map(|(token, _)| token).collect();
+        assert_eq!(l, vec![Newline])
+    }
+
+    #[test]
     fn it_works() {
         const INT: &str = r"[0-9]+";
         const FLOAT: &str = r"[0-9]+\.([0-9]+)?";
@@ -67,9 +78,8 @@ mod tests {
         let lex = lex(prog);
         
         let result: Vec<Token> = lex.map(|(token, _)| token).collect();
-        println!("{:?}", result);
         //println!("{:?}", result);
-        assert!(result == vec![
+        assert_eq!(result, vec![
             LitToken(Float(12.43)),
             LitToken(Int(12)),
             LitToken(Float(6.0)),
@@ -113,5 +123,35 @@ mod tests {
         for (token, loc) in lex("hel!lo") {
             println!("{}: {:?}", loc, token);
         }
+    }
+
+    #[test]
+    fn test4() {
+        #[derive(PartialEq, Debug)]
+        pub enum Token {
+            Word(String),
+            Number(u32),
+            EndOfFile,
+        }
+
+        // Statics and constants can be used to reuse regexes
+        const WORD: &str = r"[a-zA-Z]+";
+
+        lexer!{lex -> Token {
+            r"\s+" =>         |_|  continue, // Ignore whitespace. 'continue' is the only allowed expression except for tokens and panic
+            "[0-9]+" =>       |i|  Token::Number(i.parse().unwrap()),
+            WORD =>           |id| { // You can use blocks
+                                    println!("{}", id); 
+                                    Token::Word(id.to_string()) },
+            "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
+            "$" =>            |_|  Token::EndOfFile
+        }}
+
+        let result: Vec<Token> = lex("123 abc #comment#").map(|(token, _)| token).collect();
+        assert_eq!(result, vec![
+            Token::Number(123), 
+            Token::Word("abc".to_string()), 
+            Token::EndOfFile
+        ]);
     }
 }
