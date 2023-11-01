@@ -60,7 +60,7 @@ mod tests {
             r";" => |_| SemiColon,
             r"\{" => |_| OpenBrace,
             r"\}" => |_| CloseBrace,
-            "$" => |_| EndOfFile
+            eof => |_| EndOfFile
         });
 
         let prog = "12.43 12  6f  43.0\nbrian * 8 true";
@@ -107,7 +107,7 @@ mod tests {
             "e" => |_| Token::LitToken(Int(2)),
             "l" => |_| Token::LitToken(Int(3)),
             "o" => |_| Token::LitToken(Int(4)),
-            "!" => |_| continue,
+            "!" => |_| break,
         }}
 
         for (token, loc) in lex("hel!lo") {

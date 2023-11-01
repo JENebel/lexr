@@ -85,14 +85,15 @@ macro_rules! lexer {
 
                         self.cursor += length;
 
-                        let token = lexer!(@closure $closure); // If the closure is a continue, it skips the push
+                        let token = lexer!(@closure $closure);
                         return Some((token, parcom::SrcLoc::new(start, end)));
                     })*
-                    break
-                }
 
-                if let Some(c) = self.input_iter.next() {
-                    panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.line, self.col), (self.line, self.col)));
+                    if let Some(c) = self.input_iter.next() {
+                        panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.line, self.col), (self.line, self.col)));
+                    }
+
+                    break
                 }
 
                 None
@@ -119,7 +120,16 @@ macro_rules! lexer {
     (@regex_rule _) => {
         {
             lazy_static::lazy_static! {
-                static ref REGEX: regex::Regex = regex::Regex::new("(?s).").unwrap();
+                static ref REGEX: regex::Regex = regex::Regex::new(r"(?s).").unwrap();
+            }; 
+            &REGEX
+        }
+    };
+
+    (@regex_rule eof) => {
+        {
+            lazy_static::lazy_static! {
+                static ref REGEX: regex::Regex = regex::Regex::new(r"$").unwrap();
             }; 
             &REGEX
         }
