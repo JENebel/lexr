@@ -42,7 +42,7 @@ pub use regex;
 /// 
 macro_rules! lexer {
     ($v:vis $name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
-    concat_idents::concat_idents!(name = _LEXER_, $name {
+    parcom::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
         /// Automatically generated lexer struct. Do not access its fields directly! Only use as iterator
@@ -127,25 +127,23 @@ macro_rules! lexer {
         }
     });};
 
-    (@regex_rule _) => {
-        {
-            lazy_static! {
-                static ref REGEX: regex::Regex = regex::Regex::new(r"(?s)^.").unwrap();
-            }; 
-            &REGEX
-        }
-    };
+    (@regex_rule _) => {{
+        parcom::lazy_static::lazy_static! {
+            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new(r"(?s)^.").unwrap();
+        }; 
+        &REGEX
+    }};
 
     (@regex_rule eof) => {{
-        lazy_static::lazy_static!{
-            static ref REGEX: regex::Regex = regex::Regex::new(r"^$").unwrap();
+        parcom::lazy_static::lazy_static!{
+            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new(r"^$").unwrap();
         }; 
         &REGEX
     }};
 
     (@regex_rule $($regex:expr)+) => {{
-        lazy_static::lazy_static!{
-            static ref REGEX: regex::Regex = regex::Regex::new({
+        parcom::lazy_static::lazy_static!{
+            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new({
                 let mut r_str = "^".to_string();
                 $(r_str.push_str($regex);)+
                 r_str
