@@ -1,3 +1,8 @@
+#![macro_use]
+extern crate concat_idents;
+#[doc(hidden)]
+pub use concat_idents::*;
+
 #[macro_export]
 /// Define a lexer function with provided rules.
 ///

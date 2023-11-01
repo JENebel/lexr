@@ -4,7 +4,8 @@ pub mod parse;
 use std::fmt::Display;
 
 pub use lex::*;
-pub use concat_idents::*;
+
+
 
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// A location in the source code
