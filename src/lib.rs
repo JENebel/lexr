@@ -1,3 +1,5 @@
+extern crate concat_idents;
+
 pub mod lex;
 pub mod parse;
 

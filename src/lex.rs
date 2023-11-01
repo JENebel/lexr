@@ -1,5 +1,3 @@
-pub extern crate concat_idents;
-
 #[macro_export]
 /// Define a lexer function with provided rules.
 ///
