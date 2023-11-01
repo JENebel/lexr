@@ -1,7 +1,6 @@
-#![macro_use]
-extern crate concat_idents;
-#[doc(hidden)]
-pub use concat_idents::*;
+pub use concat_idents::concat_idents;
+pub use lazy_static;
+pub use regex;
 
 #[macro_export]
 /// Define a lexer function with provided rules.
@@ -12,7 +11,7 @@ pub use concat_idents::*;
 ///
 /// Usage example:
 ///
-///     use parcom::lexer;
+///     use parcom::*;
 ///
 ///     #[derive(PartialEq, Debug)]
 ///     pub enum Token {
@@ -130,32 +129,28 @@ macro_rules! lexer {
 
     (@regex_rule _) => {
         {
-            lazy_static::lazy_static! {
+            lazy_static! {
                 static ref REGEX: regex::Regex = regex::Regex::new(r"(?s)^.").unwrap();
             }; 
             &REGEX
         }
     };
 
-    (@regex_rule eof) => {
-        {
-            lazy_static::lazy_static! {
-                static ref REGEX: regex::Regex = regex::Regex::new(r"^$").unwrap();
-            }; 
-            &REGEX
-        }
-    };
+    (@regex_rule eof) => {{
+        lazy_static::lazy_static!{
+            static ref REGEX: regex::Regex = regex::Regex::new(r"^$").unwrap();
+        }; 
+        &REGEX
+    }};
 
-    (@regex_rule $($regex:expr)+) => {
-        {
-            lazy_static::lazy_static! {
-                static ref REGEX: regex::Regex = regex::Regex::new({
-                    let mut r_str = "^".to_string();
-                    $(r_str.push_str($regex);)+
-                    r_str
-                }.as_str()).unwrap();
-            }; 
-            &REGEX
-        }
-    };
+    (@regex_rule $($regex:expr)+) => {{
+        lazy_static::lazy_static!{
+            static ref REGEX: regex::Regex = regex::Regex::new({
+                let mut r_str = "^".to_string();
+                $(r_str.push_str($regex);)+
+                r_str
+            }.as_str()).unwrap();
+        }; 
+        &REGEX
+    }};
 }

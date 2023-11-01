@@ -1,4 +1,4 @@
-use parcom::lexer;
+use parcom::*;
 use Literal::*;
 use Token::*;
 use Operator::*;
