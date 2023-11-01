@@ -153,11 +153,25 @@ fn test4() {
     ]);
 }
 
+#[test]
+fn test5() {
+    #[derive(PartialEq, Debug)]
+    pub enum Token {
+        Word(String),
+        EndOfFile,
+    }
 
-lexer! {lex -> Token {
-    r"\s+" => |_| continue,
-    r"[0-9]+" => |i| Token::LitToken(Int(i.parse().unwrap())),
-    r"[a-zA-Z]+" => |id| Token::IdToken(id.to_string()),
-    r"#" => |_| Token::Newline,
-    r"$" => |_| Token::EndOfFile
-}}
+    lexer!{lex<'a>(s: &'a str) -> Token {
+        "#" =>  |_|  continue, // You can use a sequence of regexes
+        _ =>    |_|  Token::Word(s.to_string()),
+        eof =>  |_|  Token::EndOfFile,
+    }}
+
+    let result: Vec<Token> = lex("123##", "Argument").map(|(token, _)| token).collect();
+    assert_eq!(result, vec![
+        Token::Word("Argument".to_string()),
+        Token::Word("Argument".to_string()),
+        Token::Word("Argument".to_string()),
+        Token::EndOfFile
+    ]);
+}

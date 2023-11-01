@@ -9,9 +9,9 @@ pub use regex;
 ///
 /// If it is unable to parse an input, it returns an error with the first character in the unmatched subsequence, and the location of the error.
 ///
-/// Usage example:
+/// # Examples
 ///
-///     use parcom::*;
+///     use parcom::lexer;
 ///
 ///     #[derive(PartialEq, Debug)]
 ///     pub enum Token {
@@ -41,14 +41,14 @@ pub use regex;
 ///     ]);
 /// 
 macro_rules! lexer {
-    ($v:vis $name:ident $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
+    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
     parcom::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
         /// Automatically generated lexer struct. Do not access its fields directly! Only use as iterator
-        $v struct name<'a> {
-            input: &'a str,
-            input_iter: std::str::Chars<'a>,
+        $v struct name<'_src, $($($lt),+)?> {
+            source: &'_src str,
+            source_iter: std::str::Chars<'_src>,
             cursor: usize,
             line: usize,
             col: usize,
@@ -56,7 +56,7 @@ macro_rules! lexer {
             $($($arg: $arg_typ),*)?
         }
 
-        impl<'a> Iterator for name<'a> {
+        impl<'_src, $($($lt),+)?> Iterator for name<'_src, $($($lt),+)?> {
             type Item = ($token, parcom::SrcLoc);
 
             #[allow(unreachable_code)]
@@ -68,11 +68,11 @@ macro_rules! lexer {
                     // These allow for seamless matching of eof
                     matched = false;
                     if self.empty { break }
-                    if self.input[self.cursor..].len() == 0 { self.empty = true; }
+                    if self.source[self.cursor..].len() == 0 { self.empty = true; }
                     
                     $(
                     let regex = lexer!(@regex_rule $regpat $($regex)*);
-                    if let Some(mat) = regex.find(&self.input[self.cursor..]) {
+                    if let Some(mat) = regex.find(&self.source[self.cursor..]) {
                         matched = true;
                         let length = mat.end();
                         let $id = mat.as_str();
@@ -81,7 +81,7 @@ macro_rules! lexer {
                         let mut end = start;
                     
                         for i in 0..length {
-                            let c = self.input_iter.next().unwrap();
+                            let c = self.source_iter.next().unwrap();
                             if i == length - 1 {
                                 end = (self.line, self.col);
                             }
@@ -103,7 +103,7 @@ macro_rules! lexer {
                 }
 
                 if !self.empty && !matched {
-                    if let Some(c) = self.input_iter.next() {
+                    if let Some(c) = self.source_iter.next() {
                         panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.line, self.col), (self.line, self.col)));
                     }
                 }
@@ -114,10 +114,10 @@ macro_rules! lexer {
 
         #[doc(hidden)]
         #[doc=stringify!($token)]
-        $v fn $name(input: &str $(,$($arg: $arg_typ),*)?) -> name {
+        $v fn $name <'_src $(,$($lt),+)?>(source: &'_src str $(,$($arg: $arg_typ),*)?) -> name<'_src $(,$($lt),+)?> {
             name {
-                input,
-                input_iter: input.chars(),
+                source,
+                source_iter: source.chars(),
                 cursor: 0,
                 line: 1,
                 col: 1,
