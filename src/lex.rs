@@ -41,19 +41,42 @@ pub use regex;
 ///     ]);
 /// 
 macro_rules! lexer {
-    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param| $closure:expr),* $(,)?}) => {
+    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param $(,$loc_id:pat_param)?| $closure:expr),* $(,)?}) => {
     parcom::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
-        /// Automatically generated lexer struct. Do not access its fields directly! Only use as iterator
+        /// Automatically generated lexer struct. Do not access its fields directly!
+        /// 
+        /// The `tokens` method returns an iterator over the tokens, stripping away the source locations.
+        /// 
+        /// `vec` and `token_vec` methods are provided for convenience.
         $v struct name<'_src, $($($lt),+)?> {
             source: &'_src str,
             source_iter: std::str::Chars<'_src>,
-            cursor: usize,
             line: usize,
             col: usize,
             empty: bool,
             $($($arg: $arg_typ),*)?
+        }
+
+        impl<'_src, $($($lt),+)?> name<'_src, $($($lt),+)?> {
+            #[doc(hidden)]
+            /// Returns an iterator over the tokens, stripping away the source locations.
+            $v fn tokens(self) -> std::iter::Map<name<'_src, $($($lt),+)?>, impl FnMut(($token, parcom::SrcLoc)) -> $token> {
+                self.map(|(t, _)| t)
+            }
+
+            #[doc(hidden)]
+            /// Collects the tokens in a vector, stripping away the source locations.
+            $v fn token_vec(self) -> Vec<($token)> {
+                self.tokens().collect::<Vec<_>>()
+            }
+
+            #[doc(hidden)]
+            /// Collects the tokens in a vector.
+            $v fn vec(self) -> Vec<($token, parcom::SrcLoc)> {
+                self.collect::<Vec<_>>()
+            }
         }
 
         impl<'_src, $($($lt),+)?> Iterator for name<'_src, $($($lt),+)?> {
@@ -68,14 +91,13 @@ macro_rules! lexer {
                     // These allow for seamless matching of eof
                     matched = false;
                     if self.empty { break }
-                    if self.source[self.cursor..].len() == 0 { self.empty = true; }
+                    if self.source.len() == 0 { self.empty = true; }
                     
                     $(
                     let regex = lexer!(@regex_rule $regpat $($regex)*);
-                    if let Some(mat) = regex.find(&self.source[self.cursor..]) {
+                    if let Some(mat) = regex.find(&self.source) {
                         matched = true;
                         let length = mat.end();
-                        let $id = mat.as_str();
                         
                         let start = (self.line, self.col);
                         let mut end = start;
@@ -93,8 +115,12 @@ macro_rules! lexer {
                             }
                         }
 
-                        self.cursor += length;
+                        self.source = &self.source[length..];
 
+                        let $id = mat.as_str();
+                        $(let $loc_id = parcom::SrcLoc::new(start, end);)?
+
+                        let source = self.source;
                         let token = $closure;
                         return Some((token, parcom::SrcLoc::new(start, end)));
                     })*
@@ -113,12 +139,11 @@ macro_rules! lexer {
         }
 
         #[doc(hidden)]
-        #[doc=stringify!($token)]
+        /// Creates a new lexer from a string slice.
         $v fn $name <'_src $(,$($lt),+)?>(source: &'_src str $(,$($arg: $arg_typ),*)?) -> name<'_src $(,$($lt),+)?> {
             name {
                 source,
                 source_iter: source.chars(),
-                cursor: 0,
                 line: 1,
                 col: 1,
                 empty: false,

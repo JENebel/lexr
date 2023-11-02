@@ -44,12 +44,12 @@ impl From<& str> for Operator {
 
 #[test]
 fn test1() {
-    lexer!(lexer -> Token {
+    lexer!(lex -> Token {
         "Brian" => |_| Newline,
         eof => |_| EndOfFile,
     });
 
-    let l: Vec<Token> = lexer("Brian").map(|(token, _)| token).collect();
+    let l: Vec<Token> = lex("Brian").token_vec();
     assert_eq!(l, vec![Newline, EndOfFile])
 }
 
@@ -75,7 +75,7 @@ fn it_works() {
     let prog = "12.43 12  6f  43.0\nbrian * 8 true";
     let lex = lex(prog);
     
-    let result: Vec<Token> = lex.map(|(token, _)| token).collect();
+    let result: Vec<Token> = lex.token_vec();
     //println!("{:?}", result);
     assert_eq!(result, vec![
         LitToken(Float(12.43)),
@@ -111,10 +111,10 @@ fn test2() {
 #[test]
 fn test3() {
     lexer!{lex -> Token {
-        "h" => |_| Token::LitToken(Int(1)),
-        "e" => |_| Token::LitToken(Int(2)),
-        "l" => |_| Token::LitToken(Int(3)),
-        "o" => |_| Token::LitToken(Int(4)),
+        "h" => |_| LitToken(Int(1)),
+        "e" => |_| LitToken(Int(2)),
+        "l" => |_| LitToken(Int(3)),
+        "o" => |_| LitToken(Int(4)),
         "!" => |_| break,
     }}
 
@@ -145,7 +145,7 @@ fn test4() {
         "$" =>            |_|  Token::EndOfFile
     }}
 
-    let result: Vec<Token> = lex("123 abc #comment#").map(|(token, _)| token).collect();
+    let result: Vec<Token> = lex("123 abc #comment#").token_vec();
     assert_eq!(result, vec![
         Token::Number(123), 
         Token::Word("abc".to_string()), 
@@ -162,12 +162,12 @@ fn test5() {
     }
 
     lexer!{lex<'a>(s: &'a str) -> Token {
-        "#" =>  |_|  continue, // You can use a sequence of regexes
+        "#" =>  |_, loc| { println!("{}", loc); continue }, // You can use a sequence of regexes
         _ =>    |_|  Token::Word(s.to_string()),
         eof =>  |_|  Token::EndOfFile,
     }}
 
-    let result: Vec<Token> = lex("123##", "Argument").map(|(token, _)| token).collect();
+    let result: Vec<Token> = lex("123##", "Argument").token_vec();
     assert_eq!(result, vec![
         Token::Word("Argument".to_string()),
         Token::Word("Argument".to_string()),
