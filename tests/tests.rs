@@ -1,4 +1,4 @@
-use parcom::lex_rule;
+use parcom::{lex_rule, buf};
 use Literal::*;
 use Token::*;
 use Operator::*;
@@ -19,6 +19,7 @@ pub enum Token {
     OpenBrace,
     CloseBrace,
     Newline,
+    Dummy,
     EndOfFile,
 }
 
@@ -49,7 +50,7 @@ fn test1() {
         eof => |_| EndOfFile,
     });
 
-    let l: Vec<Token> = lex("Brian").token_vec();
+    let l: Vec<Token> = lex(buf!("Brian")).token_vec();
     assert_eq!(l, vec![Newline, EndOfFile])
 }
 
@@ -73,7 +74,8 @@ fn it_works() {
     });
 
     let prog = "12.43 12  6f  43.0\nbrian * 8 true";
-    let lex = lex(prog);
+    let buf = buf!(prog);
+    let lex = lex(buf);
     
     let result: Vec<Token> = lex.token_vec();
     //println!("{:?}", result);
@@ -102,7 +104,9 @@ fn test2() {
 
     let prog = "#hello#";
 
-    let l = lex(prog, 5);
+    let buf = buf!(prog);
+    let l = lex(buf, 5);
+
     for l in l {
         println!("{:?}", l);
     }
@@ -118,7 +122,7 @@ fn test3() {
         "!" => |_| break,
     }}
 
-    for (token, loc) in lex("hel!lo") {
+    for (token, loc) in lex(buf!("hel!lo")) {
         println!("{}: {:?}", loc, token);
     }
 }
@@ -145,7 +149,7 @@ fn test4() {
         "$" =>            |_|  Token::EndOfFile
     }}
 
-    let result: Vec<Token> = lex("123 abc #comment#").token_vec();
+    let result: Vec<Token> = lex(buf!("123 abc #comment#")).token_vec();
     assert_eq!(result, vec![
         Token::Number(123), 
         Token::Word("abc".to_string()), 
@@ -167,7 +171,7 @@ fn test5() {
         eof =>  |_|  Token::EndOfFile,
     }}
 
-    let result: Vec<Token> = lex("123##", "Argument").token_vec();
+    let result: Vec<Token> = lex("123##".into(), "Argument").token_vec();
     assert_eq!(result, vec![
         Token::Word("Argument".to_string()),
         Token::Word("Argument".to_string()),
@@ -178,28 +182,49 @@ fn test5() {
 
 #[test]
 fn comment_test() {
-    lex_rule!{token -> Token {
+    lex_rule!{lexer -> Token {
         r"\s+" => |_| continue,
         "h" => |_| LitToken(Int(1)),
         "e" => |_| LitToken(Int(2)),
         "l" => |_| LitToken(Int(3)),
         "o" => |_| LitToken(Int(4)),
-        r"/\*" => |_, _, src| { comment(src, 0); continue },
-        r"\*/" => |_, _, src| { println!("{}", src.source); continue },
+        r"\(\*" => |_, _, src| { comment(src, 0).empty(); continue },
+        r"\*\)" => |_, _, _| continue,
     }}
 
     lex_rule!{comment(depth: u32) -> () {
-        r"/\*" => |_, _, src| { comment(src, depth + 1).vec(); continue },
-        r"\*/" => |_, _, src| if depth == 0 { break } else { comment(src, depth - 1).vec(); continue },
+        r"\(\*" => |_, _, src| { comment(src, depth + 1).empty(); continue },
+        r"\*\)" => |_, _, src| if depth == 0 { break } else { comment(src, depth - 1).empty(); continue },
         _ => |_| continue,
     }}
 
-    let token = token("/* hello */hello").token_vec();
+    let token = lexer("(* hello *)hello".into()).token_vec();
     assert_eq!(token, vec![
         LitToken(Int(1)),
         LitToken(Int(2)),
         LitToken(Int(3)),
         LitToken(Int(3)),
         LitToken(Int(4)),
+    ]);
+}
+
+#[test]
+fn test_sub_rules() {
+    lex_rule!{lexer -> Token {
+        r"-" => |_| { print!("a"); Dummy },
+        r"<" => |_, _, src| { print!("b"); sub(src); continue },
+    }}
+
+    lex_rule!{sub -> Token {
+        r">" => |_, _, _| { print!("c"); break },
+        r"-" => |_| { print!("d"); continue },
+    }}
+
+    let token = lexer("--<->--".into()).token_vec();
+    assert_eq!(token, vec![
+        Dummy,
+        Dummy,
+        Dummy,
+        Dummy,
     ]);
 }
