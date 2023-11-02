@@ -1,4 +1,4 @@
-use parcom::lexer;
+use parcom::lex_rule;
 use Literal::*;
 use Token::*;
 use Operator::*;
@@ -44,7 +44,7 @@ impl From<& str> for Operator {
 
 #[test]
 fn test1() {
-    lexer!(lex -> Token {
+    lex_rule!(lex -> Token {
         "Brian" => |_| Newline,
         eof => |_| EndOfFile,
     });
@@ -57,7 +57,7 @@ fn test1() {
 fn it_works() {
     const INT: &str = r"[0-9]+";
     const FLOAT: &str = r"[0-9]+\.([0-9]+)?";
-    lexer!(lex -> Token {
+    lex_rule!(lex -> Token {
         r"\n" => |_| Newline,
         r"\s+" => |_| continue,
         "[" INT "|" FLOAT "]f" => |f| LitToken(Float(f[0..f.len() - 1].parse().unwrap())),
@@ -95,7 +95,7 @@ fn it_works() {
 fn test2() {
     const WORD: &str = r"[a-zA-Z]+";
 
-    lexer!(lex(a: i32) -> Token {
+    lex_rule!(lex(a: i32) -> Token {
         "#" WORD "#" => |w|  {println!("{w}:{a}"); EndOfFile},
         
     });
@@ -110,7 +110,7 @@ fn test2() {
 
 #[test]
 fn test3() {
-    lexer!{lex -> Token {
+    lex_rule!{lex -> Token {
         "h" => |_| LitToken(Int(1)),
         "e" => |_| LitToken(Int(2)),
         "l" => |_| LitToken(Int(3)),
@@ -135,7 +135,7 @@ fn test4() {
     // Statics and constants can be used to reuse regexes
     const WORD: &str = r"[a-zA-Z]+";
 
-    lexer!{lex -> Token {
+    lex_rule!{lex -> Token {
         r"\s+" =>         |_|  continue, // Ignore whitespace. 'continue' is the only allowed expression except for tokens and panic
         "[0-9]+" =>       |i|  Token::Number(i.parse().unwrap()),
         WORD =>           |id| { // You can use blocks
@@ -161,7 +161,7 @@ fn test5() {
         EndOfFile,
     }
 
-    lexer!{lex<'a>(s: &'a str) -> Token {
+    lex_rule!{lex<'a>(s: &'a str) -> Token {
         "#" =>  |_, loc| { println!("{}", loc); continue }, // You can use a sequence of regexes
         _ =>    |_|  Token::Word(s.to_string()),
         eof =>  |_|  Token::EndOfFile,
@@ -178,13 +178,28 @@ fn test5() {
 
 #[test]
 fn comment_test() {
-    lexer!{token -> () {
+    lex_rule!{token -> Token {
         r"\s+" => |_| continue,
-        r"hello" => |_| continue,
-        r"/\*" => |_, _, src| { println!("{}", src.source); continue },
+        "h" => |_| LitToken(Int(1)),
+        "e" => |_| LitToken(Int(2)),
+        "l" => |_| LitToken(Int(3)),
+        "o" => |_| LitToken(Int(4)),
+        r"/\*" => |_, _, src| { comment(src, 0); continue },
         r"\*/" => |_, _, src| { println!("{}", src.source); continue },
     }}
 
-    let token = token("/* hello */").token_vec();
-    assert_eq!(token, vec![]);
+    lex_rule!{comment(depth: u32) -> () {
+        r"/\*" => |_, _, src| { comment(src, depth + 1).vec(); continue },
+        r"\*/" => |_, _, src| if depth == 0 { break } else { comment(src, depth - 1).vec(); continue },
+        _ => |_| continue,
+    }}
+
+    let token = token("/* hello */hello").token_vec();
+    assert_eq!(token, vec![
+        LitToken(Int(1)),
+        LitToken(Int(2)),
+        LitToken(Int(3)),
+        LitToken(Int(3)),
+        LitToken(Int(4)),
+    ]);
 }

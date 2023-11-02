@@ -20,6 +20,17 @@ impl<'a> From<&'a str> for LexBuf<'a> {
     }
 }
 
+impl<'a> From<&'a String> for LexBuf<'a> {
+    fn from(source: &'a String) -> Self {
+        Self {
+            source,
+            line: 1,
+            col: 1,
+            empty: false,
+        }
+    }
+}
+
 impl<'an> From<&Self> for LexBuf<'an> {
     fn from(buf: &Self) -> Self {
         Self {
@@ -69,8 +80,10 @@ impl<'an> From<&Self> for LexBuf<'an> {
 ///         Token::EndOfFile
 ///     ]);
 /// 
-macro_rules! lexer {
-    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param $(,$loc_id:pat_param $(,$src_id:pat_param)?)?| $closure:expr),* $(,)?}) => {
+macro_rules! lex_rule {
+    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {
+        $($regpat:tt $($regex:expr)* => |$id:pat_param $(,$loc_id:pat_param $(,$src_id:pat_param)?)?| $closure:expr),* $(,)?
+    }) => {
     parcom::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
@@ -119,7 +132,7 @@ macro_rules! lexer {
                     if self.buf.source.len() == 0 { self.buf.empty = true; }
                     
                     $(
-                    let regex = lexer!(@regex_rule $regpat $($regex)*);
+                    let regex = lex_rule!(@regex_rule $regpat $($regex)*);
                     if let Some(mat) = regex.find(&self.buf.source) {
                         matched = true;
                         let length = mat.end();
@@ -152,6 +165,7 @@ macro_rules! lexer {
 
                     break
                 }
+
                 if !self.buf.empty && !matched {
                     if let Some(c) = self.buf.source.chars().next() {
                         panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.buf.line, self.buf.col), (self.buf.line, self.buf.col)));
@@ -164,9 +178,9 @@ macro_rules! lexer {
 
         #[doc(hidden)]
         /// Creates a new lexer from a string slice.
-        $v fn $name<'_src $(,$($lt),+)?>(source: &'_src str $(,$($arg: $arg_typ),*)?) -> name<'_src $(,$($lt),+)?> {
+        $v fn $name<'_src $(,$($lt),+)?>(source: impl Into<parcom::LexBuf<'_src>> $(,$($arg: $arg_typ),*)?) -> name<'_src $(,$($lt),+)?> {
             name {
-                buf: parcom::LexBuf::from(source),
+                buf: source.into(),
                 $($($arg),*)?
             }
         }
