@@ -175,3 +175,16 @@ fn test5() {
         Token::EndOfFile
     ]);
 }
+
+#[test]
+fn comment_test() {
+    lexer!{token -> () {
+        r"\s+" => |_| continue,
+        r"hello" => |_| continue,
+        r"/\*" => |_, _, src| { println!("{}", src.source); continue },
+        r"\*/" => |_, _, src| { println!("{}", src.source); continue },
+    }}
+
+    let token = token("/* hello */").token_vec();
+    assert_eq!(token, vec![]);
+}

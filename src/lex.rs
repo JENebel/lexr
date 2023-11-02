@@ -2,6 +2,35 @@ pub use concat_idents::concat_idents;
 pub use lazy_static;
 pub use regex;
 
+pub struct LexBuf<'a> {
+    pub source: &'a str,
+    pub line: usize,
+    pub col: usize,
+    pub empty: bool,
+}
+
+impl<'a> From<&'a str> for LexBuf<'a> {
+    fn from(source: &'a str) -> Self {
+        Self {
+            source,
+            line: 1,
+            col: 1,
+            empty: false,
+        }
+    }
+}
+
+impl<'an> From<&Self> for LexBuf<'an> {
+    fn from(buf: &Self) -> Self {
+        Self {
+            source: buf.source,
+            line: buf.line,
+            col: buf.col,
+            empty: buf.empty,
+        }
+    }
+}
+
 #[macro_export]
 /// Define a lexer function with provided rules.
 ///
@@ -41,7 +70,7 @@ pub use regex;
 ///     ]);
 /// 
 macro_rules! lexer {
-    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param $(,$loc_id:pat_param)?| $closure:expr),* $(,)?}) => {
+    ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {$($regpat:tt $($regex:expr)* => |$id:pat_param $(,$loc_id:pat_param $(,$src_id:pat_param)?)?| $closure:expr),* $(,)?}) => {
     parcom::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
@@ -51,11 +80,7 @@ macro_rules! lexer {
         /// 
         /// `vec` and `token_vec` methods are provided for convenience.
         $v struct name<'_src, $($($lt),+)?> {
-            source: &'_src str,
-            source_iter: std::str::Chars<'_src>,
-            line: usize,
-            col: usize,
-            empty: bool,
+            buf: parcom::LexBuf<'_src>,
             $($($arg: $arg_typ),*)?
         }
 
@@ -90,47 +115,46 @@ macro_rules! lexer {
                 loop {
                     // These allow for seamless matching of eof
                     matched = false;
-                    if self.empty { break }
-                    if self.source.len() == 0 { self.empty = true; }
+                    if self.buf.empty { break }
+                    if self.buf.source.len() == 0 { self.buf.empty = true; }
                     
                     $(
                     let regex = lexer!(@regex_rule $regpat $($regex)*);
-                    if let Some(mat) = regex.find(&self.source) {
+                    if let Some(mat) = regex.find(&self.buf.source) {
                         matched = true;
                         let length = mat.end();
                         
-                        let start = (self.line, self.col);
+                        let start = (self.buf.line, self.buf.col);
                         let mut end = start;
-                    
+                        
+                        let mut source_iter = self.buf.source.chars();
                         for i in 0..length {
-                            let c = self.source_iter.next().unwrap();
+                            let c = source_iter.next().unwrap();
                             if i == length - 1 {
-                                end = (self.line, self.col);
+                                end = (self.buf.line, self.buf.col);
                             }
                             if c == '\n' {
-                                self.line += 1;
-                                self.col = 1;
+                                self.buf.line += 1;
+                                self.buf.col = 1;
                             } else {
-                                self.col += 1;
+                                self.buf.col += 1;
                             }
                         }
-
-                        self.source = &self.source[length..];
+                        
+                        self.buf.source = &self.buf.source[length..];
 
                         let $id = mat.as_str();
                         $(let $loc_id = parcom::SrcLoc::new(start, end);)?
-
-                        let source = self.source;
+                        $($(let $src_id = &self.buf;)?)?
                         let token = $closure;
                         return Some((token, parcom::SrcLoc::new(start, end)));
                     })*
 
                     break
                 }
-
-                if !self.empty && !matched {
-                    if let Some(c) = self.source_iter.next() {
-                        panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.line, self.col), (self.line, self.col)));
+                if !self.buf.empty && !matched {
+                    if let Some(c) = self.buf.source.chars().next() {
+                        panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((self.buf.line, self.buf.col), (self.buf.line, self.buf.col)));
                     }
                 }
 
@@ -140,13 +164,9 @@ macro_rules! lexer {
 
         #[doc(hidden)]
         /// Creates a new lexer from a string slice.
-        $v fn $name <'_src $(,$($lt),+)?>(source: &'_src str $(,$($arg: $arg_typ),*)?) -> name<'_src $(,$($lt),+)?> {
+        $v fn $name<'_src $(,$($lt),+)?>(source: &'_src str $(,$($arg: $arg_typ),*)?) -> name<'_src $(,$($lt),+)?> {
             name {
-                source,
-                source_iter: source.chars(),
-                line: 1,
-                col: 1,
-                empty: false,
+                buf: parcom::LexBuf::from(source),
                 $($($arg),*)?
             }
         }
