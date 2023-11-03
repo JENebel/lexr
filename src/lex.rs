@@ -3,7 +3,6 @@ use std::{cell::RefCell, rc::Rc, iter::Map};
 pub use concat_idents::concat_idents;
 pub use lazy_static;
 pub use regex;
-pub use macro_find_and_replace;
 
 use crate::SrcLoc;
 
@@ -122,7 +121,7 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
 ///         eof =>            |_|  Token::EndOfFile
 ///     }}
 ///
-///     let result = lex("123 abc #comment#".into()).token_vec();
+///     let result = lex("123 abc #comment#".into()).into_token_vec();
 ///     assert_eq!(result, vec![
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
