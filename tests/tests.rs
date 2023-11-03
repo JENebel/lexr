@@ -1,4 +1,4 @@
-use parcom::{lex_rule, buf};
+use parcom::{lex_rule, SrcLoc, Lexer};
 use Literal::*;
 use Token::*;
 use Operator::*;
@@ -50,7 +50,7 @@ fn test1() {
         eof => |_| EndOfFile,
     });
 
-    let l: Vec<Token> = lex(buf!("Brian")).token_vec();
+    let l: Vec<Token> = lex("Brian".into()).into_token_vec();
     assert_eq!(l, vec![Newline, EndOfFile])
 }
 
@@ -74,11 +74,10 @@ fn it_works() {
     });
 
     let prog = "12.43 12  6f  43.0\nbrian * 8 true";
-    let buf = buf!(prog);
+    let buf = prog.into();
     let lex = lex(buf);
     
-    let result: Vec<Token> = lex.token_vec();
-    //println!("{:?}", result);
+    let result: Vec<Token> = lex.into_token_vec();
     assert_eq!(result, vec![
         LitToken(Float(12.43)),
         LitToken(Int(12)),
@@ -97,19 +96,18 @@ fn it_works() {
 fn test2() {
     const WORD: &str = r"[a-zA-Z]+";
 
-    lex_rule!(lex(a: i32) -> Token {
-        "#" WORD "#" => |w|  {println!("{w}:{a}"); EndOfFile},
+    lex_rule!(lex() -> Token {
+        "#" WORD "#" => |_| EndOfFile,
         
     });
 
     let prog = "#hello#";
 
-    let buf = buf!(prog);
-    let l = lex(buf, 5);
+    let buf = prog.into();
+    let l = lex(buf);
 
-    for l in l {
-        println!("{:?}", l);
-    }
+    let result: Vec<Token> = l.into_token_vec();
+    assert_eq!(result, vec![EndOfFile]);
 }
 
 #[test]
@@ -122,9 +120,14 @@ fn test3() {
         "!" => |_| break,
     }}
 
-    for (token, loc) in lex(buf!("hel!lo")) {
-        println!("{}: {:?}", loc, token);
-    }
+    let tokens = lex("hello!".into()).into_token_vec();
+    assert_eq!(tokens, vec![
+        LitToken(Int(1)),
+        LitToken(Int(2)),
+        LitToken(Int(3)),
+        LitToken(Int(3)),
+        LitToken(Int(4)),
+    ]);
 }
 
 #[test]
@@ -143,16 +146,16 @@ fn test4() {
         r"\s+" =>         |_|  continue, // Ignore whitespace. 'continue' is the only allowed expression except for tokens and panic
         "[0-9]+" =>       |i|  Token::Number(i.parse().unwrap()),
         WORD =>           |id| { // You can use blocks
-                                println!("{}", id); 
-                                Token::Word(id.to_string()) },
+                                let id = format!("{}!", id); 
+                                Token::Word(id) },
         "#" WORD "#" =>   |_|  continue, // You can use a sequence of regexes
         "$" =>            |_|  Token::EndOfFile
     }}
 
-    let result: Vec<Token> = lex(buf!("123 abc #comment#")).token_vec();
+    let result: Vec<Token> = lex("123 abc #comment#".into()).into_token_vec();
     assert_eq!(result, vec![
         Token::Number(123), 
-        Token::Word("abc".to_string()), 
+        Token::Word("abc!".to_string()), 
         Token::EndOfFile
     ]);
 }
@@ -166,12 +169,12 @@ fn test5() {
     }
 
     lex_rule!{lex<'a>(s: &'a str) -> Token {
-        "#" =>  |_, loc| { println!("{}", loc); continue }, // You can use a sequence of regexes
+        "#" =>  |_| continue, // You can use a sequence of regexes
         _ =>    |_|  Token::Word(s.to_string()),
         eof =>  |_|  Token::EndOfFile,
     }}
 
-    let result: Vec<Token> = lex("123##".into(), "Argument").token_vec();
+    let result: Vec<Token> = lex("123##".into(), "Argument").into_token_vec();
     assert_eq!(result, vec![
         Token::Word("Argument".to_string()),
         Token::Word("Argument".to_string()),
@@ -198,7 +201,11 @@ fn comment_test() {
         _ => |_| continue,
     }}
 
-    let token = lexer("(* hello *)hello".into()).token_vec();
+    let lexr = lexer("(* hello *)hello".into());
+    
+    
+
+    let token = lexr.into_token_vec();
     assert_eq!(token, vec![
         LitToken(Int(1)),
         LitToken(Int(2)),
@@ -211,20 +218,22 @@ fn comment_test() {
 #[test]
 fn test_sub_rules() {
     lex_rule!{lexer -> Token {
-        r"-" => |_| { print!("a"); Dummy },
-        r"<" => |_, _, src| { print!("b"); sub(src); continue },
+        r"-" => |_| Dummy,
+        r"<" => |_, _, src| { sub(src).empty(); continue },
+        eof =>  |_| EndOfFile,
     }}
 
-    lex_rule!{sub -> Token {
-        r">" => |_, _, _| { print!("c"); break },
-        r"-" => |_| { print!("d"); continue },
+    lex_rule!{sub() -> Token {
+        r">" => |_, _, _| break,
+        r"-" => |_| continue,
     }}
 
-    let token = lexer("--<->--".into()).token_vec();
+    let token = lexer("--<-->--".into()).into_token_vec();
     assert_eq!(token, vec![
         Dummy,
         Dummy,
         Dummy,
         Dummy,
+        EndOfFile
     ]);
 }
