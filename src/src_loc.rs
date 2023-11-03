@@ -8,6 +8,11 @@ pub struct SrcLoc {
 }
 
 impl SrcLoc {
+    pub const DUMMY: Self = Self {
+        start: (0, 0),
+        end: (0, 0),
+    };
+
     /// Create a new source location from a start and end position
     pub fn new(start: (usize, usize), end: (usize, usize)) -> Self {
         Self {

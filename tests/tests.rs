@@ -1,4 +1,4 @@
-use parcom::{lex_rule, SrcLoc, Lexer};
+use parcom::lex_rule;
 use Literal::*;
 use Token::*;
 use Operator::*;
