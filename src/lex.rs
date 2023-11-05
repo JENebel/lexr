@@ -4,6 +4,7 @@ pub use concat_idents::concat_idents;
 pub use lazy_static;
 pub use regex;
 
+
 use crate::SrcLoc;
 
 pub struct LexBuf<'a> {
@@ -90,6 +91,31 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
     pub fn empty(self) {
         for _ in self {}
     }
+
+    /// Gets the next token, stripping away the SrcLoc
+    pub fn next_token(&mut self) -> Option<T> {
+        self.next().map(|a| a.0)
+    }
+
+    /// Consumes the lexer returning a single (token, SrcLoc) tuple.
+    /// 
+    /// Panics if the lexer is empty
+    pub fn once(mut self) -> (T, SrcLoc) {
+        match self.next() {
+            Some(t) => t,
+            None => panic!("Called once() on an empty lexer"),
+        }
+    }
+
+    /// Consumes the lexer returning a single token.
+    /// 
+    /// Panics if the lexer is empty
+    pub fn once_token(mut self) -> T {
+        match self.next() {
+            Some(t) => t.0,
+            None => panic!("Called once() on an empty lexer"),
+        }
+    }
 }
 
 #[macro_export]
@@ -121,7 +147,7 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
 ///         eof =>            |_|  Token::EndOfFile
 ///     }}
 ///
-///     let result = lex("123 abc #comment#".into()).into_token_vec();
+///     let result = lex("123 abc #comment#").into_token_vec();
 ///     assert_eq!(result, vec![
 ///         Token::Number(123), 
 ///         Token::Word("abc".to_string()), 
@@ -130,7 +156,7 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
 ///
 macro_rules! lex_rule {
     ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {
-        $($regpat:tt $($regex:expr)* => |$id:pat_param $(,$loc_id:pat_param $(,$src_id:tt)?)?| $closure:expr),* $(,)?
+        $($regpat:tt $($regex:expr)* => |$id:pat_param $(,$src_id:pat_param $(,$loc_id:pat_param)?)?| $closure:expr),* $(,)?
     }) => {
     parcom::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
@@ -192,10 +218,10 @@ macro_rules! lex_rule {
                         *src = &src[length..];
 
                         let $id = mat.as_str();
-                        $(let $loc_id = parcom::SrcLoc::new(start, end);)?
+                        $($(let $loc_id = parcom::SrcLoc::new(start, end);)?)?
                         drop(src);
                         let token = {
-                            $($(let $src_id = self.buf.share();)?)?
+                            $(let $src_id = self.buf.share();)?
                             $closure
                         };
 
@@ -218,9 +244,9 @@ macro_rules! lex_rule {
         #[doc(hidden)]
         #[must_use]
         /// Creates a new lexer from a string slice.
-        $v fn $name<'_buf $(,$($lt),+)?>(buf: parcom::LexBuf<'_buf> $(,$($arg: $arg_typ),*)?) -> parcom::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
+        $v fn $name<'_buf $(,$($lt),+)?>(buf: impl Into<parcom::LexBuf<'_buf>> $(,$($arg: $arg_typ),*)?) -> parcom::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
             parcom::Lexer::new(name {
-                buf,
+                buf: buf.into(),
                 $($($arg),*)?
             })
         }
