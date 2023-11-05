@@ -6,6 +6,16 @@ enum Token {
 use Token::*;
 
 #[test]
+fn wildcard_matches_any_char() {
+    lex_rule!{wildcard() -> Token {
+        _ => |_| Token::A,
+    }};
+
+    let toks = wildcard("abc").into_token_vec();
+    assert_eq!(toks, vec![A, A, A]);
+}
+
+#[test]
 fn can_use_buf_in_sub_rule() {
     lex_rule!{main -> Token {
         "a" => |_| A,
@@ -153,4 +163,26 @@ fn terminate_without_explicit_eof_rule() {
 
     let toks = eof("").into_vec();
     assert_eq!(toks, vec![]);
+}
+
+#[test]
+fn wildcard_does_not_match_eof() {
+    lex_rule!{wildcard() -> Token {
+        _ => |_| Token::A,
+        eof => |_| Token::Eof
+    }};
+
+    let toks = wildcard("").into_token_vec();
+    assert_eq!(toks, vec![Eof]);
+}
+
+#[test]
+fn only_single_eof_with_wildcard_rule() {
+    lex_rule!{wildcard() -> Token {
+        eof => |_| Token::Eof,
+        _ => |_| continue,
+    }};
+
+    let toks = wildcard("aaaa").into_token_vec();
+    assert_eq!(toks, vec![Eof]);
 }

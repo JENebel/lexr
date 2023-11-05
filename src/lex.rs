@@ -261,7 +261,7 @@ macro_rules! lex_rule {
 
     (@regex_rule eof) => {{
         parcom::lazy_static::lazy_static!{
-            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new(r"\z").unwrap();
+            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new(r"^\z").unwrap();
         }; 
         &REGEX
     }};
