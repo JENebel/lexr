@@ -1,16 +1,7 @@
-[package]
-name = "lexr"
-version = "0.1.0"
-edition = "2021"
-authors = ["Joachim Enggård Nebel"]
-description = "Flexible, powerful and simple lexing in Rust"
-readme = "README.md"
-repository = "https://github.com/JENebel/lexr.git"
-license = "MIT"
-keywords = ["lex", "lexer", "lexing", "lexr", "flex"]
-categories = ["parsing"]
+[workspace]
+resolver = "2"
 
-[dependencies]
-regex = "1.10.2"
-lazy_static = "1.4.0"
-concat-idents = "1.1.5"
+members = [
+    "lexr",
+    "parsr",
+]
