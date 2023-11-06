@@ -127,7 +127,7 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
 ///
 /// # Examples
 ///
-///     use parcom::lex_rule;
+///     use lexr::lex_rule;
 ///
 ///     #[derive(PartialEq, Debug)]
 ///     pub enum Token {
@@ -158,7 +158,7 @@ macro_rules! lex_rule {
     ($v:vis $name:ident $(<$($lt:lifetime),+>)? $(($($arg:ident: $arg_typ:ty),*))? -> $token:ty {
         $($regpat:tt $($regex:expr)* => |$id:pat_param $(,$src_id:pat_param $(,$loc_id:pat_param)?)?| $closure:expr),* $(,)?
     }) => {
-    parcom::concat_idents!(name = _LEXER_, $name {
+    lexr::concat_idents!(name = _LEXER_, $name {
         #[allow(non_camel_case_types)]
         #[doc(hidden)]
         /// Automatically generated lexer struct. Do not access its fields directly!
@@ -167,18 +167,18 @@ macro_rules! lex_rule {
         /// 
         /// `vec` and `token_vec` methods are provided for convenience.
         $v struct name<'_buf, $($($lt),+)?> {
-            buf: parcom::LexBuf<'_buf>,
+            buf: lexr::LexBuf<'_buf>,
             $($($arg: $arg_typ),*)?
         }
 
-        impl<'_buf $(,$($lt),+)?> From<name<'_buf, $($($lt),+)?>> for parcom::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
+        impl<'_buf $(,$($lt),+)?> From<name<'_buf, $($($lt),+)?>> for lexr::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
             fn from(lexer: name<'_buf $(,$($lt),+)?>) -> Self {
-                parcom::Lexer::new(lexer)
+                lexr::Lexer::new(lexer)
             }
         }
 
         impl<'_src, $($($lt),+)?> Iterator for name<'_src, $($($lt),+)?> {
-            type Item = ($token, parcom::SrcLoc);
+            type Item = ($token, lexr::SrcLoc);
 
             #[allow(unreachable_code)]
             fn next(&mut self) -> Option<Self::Item> {
@@ -218,14 +218,14 @@ macro_rules! lex_rule {
                         *src = &src[length..];
 
                         let $id = mat.as_str();
-                        $($(let $loc_id = parcom::SrcLoc::new(start, end);)?)?
+                        $($(let $loc_id = lexr::SrcLoc::new(start, end);)?)?
                         drop(src);
                         let token = {
                             $(let $src_id = self.buf.share();)?
                             $closure
                         };
 
-                        return Some((token, parcom::SrcLoc::new(start, end)));
+                        return Some((token, lexr::SrcLoc::new(start, end)));
                     })*
 
                     break
@@ -233,7 +233,7 @@ macro_rules! lex_rule {
 
                 if !*self.buf.empty.borrow() && !matched {
                     if let Some(c) = self.buf.source.borrow().chars().next() {
-                        panic!("Unexpected character '{}' at {}", c, parcom::SrcLoc::new((*self.buf.line.borrow(), *self.buf.col.borrow()), (*self.buf.line.borrow(), *self.buf.col.borrow())));
+                        panic!("Unexpected character '{}' at {}", c, lexr::SrcLoc::new((*self.buf.line.borrow(), *self.buf.col.borrow()), (*self.buf.line.borrow(), *self.buf.col.borrow())));
                     }
                 }
 
@@ -244,8 +244,8 @@ macro_rules! lex_rule {
         #[doc(hidden)]
         #[must_use]
         /// Creates a new lexer from a string slice.
-        $v fn $name<'_buf $(,$($lt),+)?>(buf: impl Into<parcom::LexBuf<'_buf>> $(,$($arg: $arg_typ),*)?) -> parcom::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
-            parcom::Lexer::new(name {
+        $v fn $name<'_buf $(,$($lt),+)?>(buf: impl Into<lexr::LexBuf<'_buf>> $(,$($arg: $arg_typ),*)?) -> lexr::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
+            lexr::Lexer::new(name {
                 buf: buf.into(),
                 $($($arg),*)?
             })
@@ -253,22 +253,22 @@ macro_rules! lex_rule {
     });};
 
     (@regex_rule _) => {{
-        parcom::lazy_static::lazy_static! {
-            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new(r"(?s)^.").unwrap();
+        lexr::lazy_static::lazy_static! {
+            static ref REGEX: lexr::regex::Regex = lexr::regex::Regex::new(r"(?s)^.").unwrap();
         }; 
         &REGEX
     }};
 
     (@regex_rule eof) => {{
-        parcom::lazy_static::lazy_static!{
-            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new(r"^\z").unwrap();
+        lexr::lazy_static::lazy_static!{
+            static ref REGEX: lexr::regex::Regex = lexr::regex::Regex::new(r"^\z").unwrap();
         }; 
         &REGEX
     }};
 
     (@regex_rule $($regex:expr)+) => {{
-        parcom::lazy_static::lazy_static!{
-            static ref REGEX: parcom::regex::Regex = parcom::regex::Regex::new({
+        lexr::lazy_static::lazy_static!{
+            static ref REGEX: lexr::regex::Regex = lexr::regex::Regex::new({
                 let mut r_str = "^".to_string();
                 $(r_str.push_str($regex);)+
                 r_str

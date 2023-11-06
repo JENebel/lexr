@@ -1,4 +1,4 @@
-use parcom::lex_rule;
+use lexr::lex_rule;
 #[derive(Debug, PartialEq)]
 enum Token {
     A, B, C, Eof
@@ -104,8 +104,8 @@ fn lex_params_work_as_expected() {
         "c" => |_| C,
         "d" => |a, b, c| {
             let _a: &str = a;
-            let _b: parcom::LexBuf = b;
-            let _c: parcom::SrcLoc = c;
+            let _b: lexr::LexBuf = b;
+            let _c: lexr::SrcLoc = c;
             break;
         }
     }}
