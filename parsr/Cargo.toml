@@ -2,7 +2,12 @@
 name = "parsr"
 version = "0.1.0"
 edition = "2021"
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+authors = ["Joachim Enggård Nebel"]
+description = "Flexible, powerful and simple parsing in Rust"
+readme = "README.md"
+repository = "https://github.com/JENebel/lexr.git"
+license = "MIT"
+keywords = ["parse", "parser", "parsing", "parsr", "bison"]
+categories = ["parsing"]
 
 [dependencies]
