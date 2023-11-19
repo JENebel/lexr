@@ -42,32 +42,12 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
     }
 
     /// Empties and discards all tokens in the lexer.
-    pub fn exhaust(self) {
+    pub fn deplete(self) {
         for _ in self {}
     }
 
     /// Gets the next token, stripping away the SrcLoc
     pub fn next_token(&mut self) -> Option<T> {
         self.next().map(|a| a.0)
-    }
-
-    /// Consumes the lexer returning a single (token, SrcLoc) tuple.
-    /// 
-    /// Panics if the lexer is empty
-    pub fn once(mut self) -> (T, SrcLoc) {
-        match self.next() {
-            Some(t) => t,
-            None => panic!("Called once() on an empty lexer"),
-        }
-    }
-
-    /// Consumes the lexer returning a single token.
-    /// 
-    /// Panics if the lexer is empty
-    pub fn once_token(mut self) -> T {
-        match self.next() {
-            Some(t) => t.0,
-            None => panic!("Called once() on an empty lexer"),
-        }
     }
 }

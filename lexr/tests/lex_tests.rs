@@ -20,9 +20,7 @@ fn can_use_buf_in_sub_rule() {
     lex_rule!{main -> Token {
         "a" => |_| A,
         "b" => |_, buf| {
-            let sub = sub(buf);
-            let a = sub.once_token();
-            a
+            sub(buf).next_token().unwrap()
         }
     }}
 
@@ -39,7 +37,7 @@ fn subrule_mutates_same_buf() {
     lex_rule!{main -> Token {
         "a" => |_| A,
         "b" => |_, buf| {
-            sub(buf).exhaust();
+            sub(buf).deplete();
             continue
         },
         "c" => |_| C
@@ -185,4 +183,42 @@ fn only_single_eof_with_wildcard_rule() {
 
     let toks = wildcard("aaaa").into_token_vec();
     assert_eq!(toks, vec![Eof]);
+}
+
+#[test]
+#[should_panic(expected = "Unexpected character 'd' at 1:4")]
+fn error_reporting() {
+    lex_rule!{error() -> Token {
+        "a" => |_, _, loc| {println!("{}", loc); A},
+        "b" => |_, _, loc| {println!("{:?}", loc.get_abs_loc()); B},
+        "c" => |_, _, loc| {println!("{}", loc); C},
+    }};
+
+    let toks = error("abcd").into_token_vec();
+    assert_eq!(toks, vec![A, B, C, A]);
+}
+
+#[test]
+fn readme_example() {
+    use lexr::lex_rule;
+    #[derive(Debug, PartialEq)]
+    enum T {
+        A, B, C, D, Num, Eof
+    }
+    use T::*;
+    
+    const A_RULE: &str = "a";
+    
+    lex_rule!{lex -> T {
+        ws => |_| continue, // Matches whitespace
+        "a" => |_| A, // Matches "a"
+        "b" "a" => |_| B, // Matches "bc"
+        "c" A_RULE => |_| C, // Matches "ba"
+        r"[0-9]+" => |_| Num, // Matches any number of digits
+        _ => |_| D, // Matches any single character
+        eof => |_| Eof, // Matches the end of the input
+    }}
+    
+    let tokens = lex("a ba ca S 42").into_token_vec();
+    assert_eq!(tokens, vec![A, B, C, D, Num, Eof])
 }

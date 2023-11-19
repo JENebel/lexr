@@ -3,6 +3,7 @@ use std::fmt::Display;
 #[derive(Clone, Copy, Debug, PartialEq)]
 /// A location in the source code
 pub struct SrcLoc {
+    abs_range: (usize, usize),
     start: (usize, usize),
     end: (usize, usize),
 }
@@ -12,6 +13,7 @@ impl SrcLoc {
     pub const DUMMY: Self = Self {
         start: (0, 0),
         end: (0, 0),
+        abs_range: (0, 0),
     };
 
     /// The start of the source location. (start_line, start_col)
@@ -25,10 +27,11 @@ impl SrcLoc {
     }
 
     /// Create a new source location from a start and end position
-    pub fn new(start: (usize, usize), end: (usize, usize)) -> Self {
+    pub fn new(start: (usize, usize), end: (usize, usize), abs: (usize, usize)) -> Self {
         Self {
             start,
             end,
+            abs_range: abs,
         }
     }
 
@@ -39,7 +42,8 @@ impl SrcLoc {
         assert!(self.end <= other.start, "Combining overlapping source locations");
         SrcLoc {
             start: self.start,
-            end: other.end
+            end: other.end,
+            abs_range: (self.abs_range.0, other.abs_range.1),
         }
     }
 
@@ -48,6 +52,11 @@ impl SrcLoc {
     /// returns (start_line, start_col, end_line, end_col)
     pub fn get_loc(&self) -> (usize, usize, usize, usize) {
         (self.start.0, self.start.1, self.end.0, self.end.1)
+    }
+
+    /// The absolute range of the source location, meaning the char indexes. [start, end)
+    pub fn get_abs_loc(&self) -> (usize, usize) {
+        self.abs_range
     }
 }
 

@@ -11,6 +11,7 @@ pub struct LexBuf<'a> {
     pub source: Rc<RefCell<&'a str>>,
     pub line: Rc<RefCell<usize>>,
     pub col: Rc<RefCell<usize>>,
+    pub idx: Rc<RefCell<usize>>,
     pub empty: Rc<RefCell<bool>>,
 }
 
@@ -20,6 +21,7 @@ impl<'a> LexBuf<'a> {
             source: self.source.clone(),
             line: self.line.clone(),
             col: self.col.clone(),
+            idx: self.idx.clone(),
             empty: self.empty.clone(),
         }
     }
@@ -37,6 +39,7 @@ impl<'a> From<&'a str> for LexBuf<'a> {
             source: Rc::new(RefCell::new(value)),
             line: Rc::new(RefCell::new(1)),
             col: Rc::new(RefCell::new(1)),
+            idx: Rc::new(RefCell::new(0)),
             empty: Rc::new(RefCell::new(false)),
         }
     }
@@ -48,6 +51,7 @@ impl<'a> From<&'a String> for LexBuf<'a> {
             source: Rc::new(RefCell::new(source)),
             line: Rc::new(RefCell::new(1)),
             col: Rc::new(RefCell::new(1)),
+            idx: Rc::new(RefCell::new(0)),
             empty: Rc::new(RefCell::new(false)),
         }
     }

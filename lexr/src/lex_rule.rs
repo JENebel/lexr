@@ -71,6 +71,8 @@ macro_rules! lex_rule {
             fn next(&mut self) -> Option<Self::Item> {
                 $($(let $arg: $arg_typ = self.$arg);*)?;
 
+                let start_idx = *self.buf.idx.borrow();
+
                 let mut matched = false;
                 loop {
                     // These allow for seamless matching of eof
@@ -103,16 +105,18 @@ macro_rules! lex_rule {
                         }
 
                         *src = &src[length..];
+                        let end_idx = start_idx + length;
+                        self.buf.idx.replace(end_idx);
 
                         let $id = mat.as_str();
-                        $($(let $loc_id = lexr::SrcLoc::new(start, end);)?)?
+                        $($(let $loc_id = lexr::SrcLoc::new(start, end, (start_idx, end_idx));)?)?
                         drop(src);
                         let token = {
                             $(let $src_id = self.buf.share();)?
                             $closure
                         };
 
-                        return Some((token, lexr::SrcLoc::new(start, end)));
+                        return Some((token, lexr::SrcLoc::new(start, end, (start_idx, end_idx))));
                     })*
 
                     break
@@ -120,7 +124,7 @@ macro_rules! lex_rule {
 
                 if !*self.buf.empty.borrow() && !matched {
                     if let Some(c) = self.buf.source.borrow().chars().next() {
-                        panic!("Unexpected character '{}' at {}", c, lexr::SrcLoc::new((*self.buf.line.borrow(), *self.buf.col.borrow()), (*self.buf.line.borrow(), *self.buf.col.borrow())));
+                        panic!("Unexpected character '{}' at {}", c, lexr::SrcLoc::new((*self.buf.line.borrow(), *self.buf.col.borrow()), (*self.buf.line.borrow(), *self.buf.col.borrow()), (*self.buf.idx.borrow(), *self.buf.idx.borrow())));
                     }
                 }
 
@@ -151,6 +155,13 @@ macro_rules! lex_rule {
     (@regex_rule eof) => {{
         lexr::lazy_static::lazy_static!{
             static ref REGEX: lexr::regex::Regex = lexr::regex::Regex::new(r"^\z").unwrap();
+        }; 
+        &REGEX
+    }};
+
+    (@regex_rule ws) => {{
+        lexr::lazy_static::lazy_static!{
+            static ref REGEX: lexr::regex::Regex = lexr::regex::Regex::new(r"^[ \n\r\t]").unwrap();
         }; 
         &REGEX
     }};
