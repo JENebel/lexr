@@ -1,11 +1,17 @@
 use std::iter::Map;
-use super::SrcLoc;
+use crate::SrcLoc;
 
+/// A lexer produces tokens and locations from a defined lexing rule.
+/// 
+/// The lexer is an iterator over the input string, producing tokens and locations as it goes.
+/// 
+/// If it is unable to match any of the patterns, it will panic and report the unexpected character.
 pub struct Lexer<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> {
     iter: Ite,
 }
 
 impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
+    #[doc(hidden)]
     pub fn new(iter: Ite) -> Self {
         Self { iter }
     }
@@ -36,7 +42,7 @@ impl<T, Ite: Iterator<Item = (T, crate::SrcLoc)>> Lexer<T, Ite> {
     }
 
     /// Empties and discards all tokens in the lexer.
-    pub fn empty(self) {
+    pub fn exhaust(self) {
         for _ in self {}
     }
 

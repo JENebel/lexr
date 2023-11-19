@@ -3,6 +3,10 @@ use std::{rc::Rc, cell::RefCell};
 /// A buffer for lexing.
 /// 
 /// This is a wrapper around a string slice that stores the current state of the lexer.
+/// 
+/// Lexing functions are provided with a buffer,
+/// which is normally automatically generated from an input string.
+/// Thus you would rarely need to use this struct directly.
 pub struct LexBuf<'a> {
     pub source: Rc<RefCell<&'a str>>,
     pub line: Rc<RefCell<usize>>,

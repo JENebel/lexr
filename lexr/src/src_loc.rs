@@ -8,10 +8,21 @@ pub struct SrcLoc {
 }
 
 impl SrcLoc {
+    /// A dummy source location. A zeroed source location.
     pub const DUMMY: Self = Self {
         start: (0, 0),
         end: (0, 0),
     };
+
+    /// The start of the source location. (start_line, start_col)
+    pub fn start(&self) -> (usize, usize) {
+        self.start
+    }
+
+    /// The end of the source location. (end_line, end_col)
+    pub fn end(&self) -> (usize, usize) {
+        self.end
+    }
 
     /// Create a new source location from a start and end position
     pub fn new(start: (usize, usize), end: (usize, usize)) -> Self {
@@ -24,7 +35,7 @@ impl SrcLoc {
     /// Combine two source locations into one, spanning from the start of the first to the end of the second
     /// 
     /// Panics if the source locations overlap
-    pub fn combine(&self, other: SrcLoc) -> SrcLoc {
+    pub fn combine(self, other: SrcLoc) -> SrcLoc {
         assert!(self.end <= other.start, "Combining overlapping source locations");
         SrcLoc {
             start: self.start,

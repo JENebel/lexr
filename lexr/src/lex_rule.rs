@@ -1,3 +1,4 @@
+#[doc(hidden)]
 pub use concat_idents::concat_idents;
 pub use lazy_static;
 pub use regex;
@@ -8,6 +9,8 @@ pub use regex;
 /// The lexer function takes a string slice and returns a vector of tokens and their locations.
 ///
 /// If it is unable to parse an input, it returns an error with the first character in the unmatched subsequence, and the location of the error.
+/// 
+/// More documentation can be found in the [crate root](crate).
 ///
 /// # Examples
 ///
@@ -128,6 +131,8 @@ macro_rules! lex_rule {
         #[doc(hidden)]
         #[must_use]
         /// Creates a new lexer from a string slice.
+        /// 
+        /// A [`Lexer`](crate::Lexer) is returned, which can be used to iterate over the tokens.
         $v fn $name<'_buf $(,$($lt),+)?>(buf: impl Into<lexr::LexBuf<'_buf>> $(,$($arg: $arg_typ),*)?) -> lexr::Lexer<$token, name<'_buf $(,$($lt),+)?>> {
             lexr::Lexer::new(name {
                 buf: buf.into(),

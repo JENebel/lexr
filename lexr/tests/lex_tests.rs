@@ -39,7 +39,7 @@ fn subrule_mutates_same_buf() {
     lex_rule!{main -> Token {
         "a" => |_| A,
         "b" => |_, buf| {
-            sub(buf).empty();
+            sub(buf).exhaust();
             continue
         },
         "c" => |_| C
